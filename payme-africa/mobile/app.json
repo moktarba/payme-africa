@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "PayMe Africa",
+    "slug": "payme-africa",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.paymeafrica.app"
+    },
+    "android": {
+      "package": "com.paymeafrica.app",
+      "permissions": ["android.permission.INTERNET", "android.permission.VIBRATE"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "scheme": "payme"
+  }
+}

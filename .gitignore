@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.expo/
+.expo-shared/
+.env
+backend/node_modules/
+mobile/node_modules/
+postgres_data/
+redis_data/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
