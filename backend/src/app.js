@@ -77,6 +77,18 @@ async function loadRoutes() {
     app.use('/employees',     employeeRoutes);
     app.use('/notifications', notifRoutes);
 
+    // Handlers d'erreur enregistrés APRÈS les routes (ordre Express obligatoire)
+    app.use((req, res) => {
+      res.status(404).json({ success: false, message: 'Route introuvable', code: 'NOT_FOUND' });
+    });
+    app.use((err, req, res, next) => {
+      const status  = err.status  || 500;
+      const code    = err.code    || 'ERREUR_SERVEUR';
+      const message = err.message || 'Erreur interne';
+      console.error(`[ERROR] ${status} ${code}: ${message}`);
+      res.status(status).json({ success: false, message, code });
+    });
+
     routesLoaded = true;
     console.log('✅ Routes chargées');
   } catch (err) {
@@ -84,19 +96,6 @@ async function loadRoutes() {
     console.error(err.stack);
   }
 }
-
-// ── GESTION D'ERREURS ────────────────────────────────────────────────
-app.use((err, req, res, next) => {
-  const status  = err.status  || 500;
-  const code    = err.code    || 'ERREUR_SERVEUR';
-  const message = err.message || 'Erreur interne';
-  console.error(`[ERROR] ${status} ${code}: ${message}`);
-  res.status(status).json({ success: false, message, code });
-});
-
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: 'Route introuvable', code: 'NOT_FOUND' });
-});
 
 // ── DÉMARRAGE ────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '4000');
