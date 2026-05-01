@@ -52,7 +52,7 @@ router.put('/me', authenticate, async (req, res) => {
     return res.status(400).json({ success: false, message: error.details[0].message });
   }
 
-  const { businessName, ownerName, city, zone, activityType } = req.body;
+  const { businessName, ownerName, city, zone, activityType, pushToken } = req.body;
 
   const { rows } = await db.query(
     `UPDATE merchants SET
@@ -60,10 +60,11 @@ router.put('/me', authenticate, async (req, res) => {
       owner_name = COALESCE($2, owner_name),
       city = COALESCE($3, city),
       zone = COALESCE($4, zone),
-      activity_type = COALESCE($5, activity_type)
-     WHERE id = $6
+      activity_type = COALESCE($5, activity_type),
+      push_token    = COALESCE($6, push_token)
+     WHERE id = $7
      RETURNING id, phone, business_name, owner_name, city, zone, activity_type, currency`,
-    [businessName, ownerName, city, zone, activityType, req.merchant.id]
+    [businessName, ownerName, city, zone, activityType, pushToken || null, req.merchant.id]
   );
 
   res.json({ success: true, merchant: rows[0] });

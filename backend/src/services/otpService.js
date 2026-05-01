@@ -1,10 +1,9 @@
-const { db, redisClient, connectRedis, logger } = require('../config/database');
+const { db, redisClient, logger } = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 
 const OTP_EXPIRES_MINUTES = parseInt(process.env.OTP_EXPIRES_MINUTES || '5');
 const OTP_LENGTH = parseInt(process.env.OTP_LENGTH || '6');
 const MAX_ATTEMPTS = 3;
-const fallbackOtpRateStore = new Map();
 
 /**
  * Génère un code OTP numérique
@@ -13,20 +12,6 @@ function generateCode() {
   const min = Math.pow(10, OTP_LENGTH - 1);
   const max = Math.pow(10, OTP_LENGTH) - 1;
   return Math.floor(min + Math.random() * (max - min + 1)).toString();
-}
-
-function incrementFallbackOtpCounter(key) {
-  const now = Date.now();
-  const current = fallbackOtpRateStore.get(key);
-
-  if (!current || current.expiresAt <= now) {
-    fallbackOtpRateStore.set(key, { count: 1, expiresAt: now + 3600 * 1000 });
-    return 1;
-  }
-
-  current.count += 1;
-  fallbackOtpRateStore.set(key, current);
-  return current.count;
 }
 
 /**
@@ -49,19 +34,8 @@ async function sendOtp(phone, purpose = 'login') {
 
   // Rate limiting : max 3 OTP par heure
   const rateLimitKey = `otp_rate:${normalizedPhone}`;
-  let count;
-
-  try {
-    await connectRedis();
-    count = await redisClient.incr(rateLimitKey);
-    if (count === 1) await redisClient.expire(rateLimitKey, 3600);
-  } catch (err) {
-    logger.warn('Redis indisponible, fallback rate limit OTP en memoire', {
-      phone: normalizedPhone,
-      error: err.message,
-    });
-    count = incrementFallbackOtpCounter(rateLimitKey);
-  }
+  const count = await redisClient.incr(rateLimitKey);
+  if (count === 1) await redisClient.expire(rateLimitKey, 3600);
   if (count > 3) {
     throw { code: 'TROP_DE_TENTATIVES', message: 'Trop de demandes. Attendez une heure.' };
   }
