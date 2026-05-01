@@ -1,72 +1,91 @@
-require('dotenv').config();
-require('express-async-errors');
+'use strict';
 
 const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-
-const { logger } = require('./config/database');
-const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
-
-const authRoutes = require('./routes/auth');
-const merchantRoutes = require('./routes/merchants');
-const transactionRoutes = require('./routes/transactions');
-const catalogRoutes = require('./routes/catalog');
+const cors    = require('cors');
+const path    = require('path');
 
 const app = express();
 
-app.use(helmet());
-app.use(express.json({ limit: '1mb' }));
+app.use(cors({ origin: '*' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:19006').split(',');
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('CORS non autorise'));
-  },
-  credentials: true,
-}));
-
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('combined', {
-    stream: { write: (msg) => logger.info(msg.trim()) },
-  }));
-}
-
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: { success: false, message: 'Trop de requetes. Attendez quelques minutes.' },
-});
-app.use(globalLimiter);
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { success: false, message: 'Trop de tentatives. Attendez 15 minutes.' },
-});
-
+// HEALTH — répond SANS base de données
 app.get('/health', (req, res) => {
   res.json({
     success: true,
-    status: 'ok',
-    version: '1.0.0',
-    env: process.env.NODE_ENV,
-    timestamp: new Date().toISOString(),
+    status:  'ok',
+    mode:    process.env.NODE_ENV || 'development',
+    version: '4.0.0',
+    ts:      new Date().toISOString(),
   });
 });
 
-app.use('/auth', authLimiter, authRoutes);
-app.use('/merchants', merchantRoutes);
-app.use('/transactions', transactionRoutes);
-app.use('/catalog', catalogRoutes);
+let routesLoaded = false;
+async function loadRoutes() {
+  if (routesLoaded) return;
+  try {
+    app.use('/auth',          require('./routes/auth'));
+    app.use('/merchants',     require('./routes/merchants'));
+    app.use('/transactions',  require('./routes/transactions'));
+    app.use('/catalog',       require('./routes/catalog'));
+    app.use('/reports',       require('./routes/reports'));
+    app.use('/employees',     require('./routes/employees'));
+    app.use('/notifications', require('./routes/notifications'));
+    app.use('/webhooks',      require('./routes/webhooks'));
+    app.use('/payment-links', require('./routes/paymentLinks'));
+    app.get('/p/:token', (req, res) => {
+      res.sendFile(path.join(__dirname, 'public', 'payment.html'));
+    });
+    routesLoaded = true;
+    console.log('✅ Routes chargées');
+  } catch (err) {
+    console.error('❌ Routes:', err.message);
+  }
+}
 
-app.use(notFoundHandler);
-app.use(errorHandler);
+app.use((err, req, res, next) => {
+  res.status(err.status || 500).json({ success: false, message: err.message, code: err.code || 'ERROR' });
+});
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'Route introuvable', code: 'NOT_FOUND' });
+});
+
+const PORT = parseInt(process.env.PORT || '4000');
+
+async function start() {
+  console.log('🚀 Démarrage PayMe Africa...');
+  console.log('   PORT:', PORT);
+  console.log('   DATABASE_URL:', process.env.DATABASE_URL ? '✅ définie' : '❌ MANQUANTE');
+  console.log('   JWT_SECRET:',   process.env.JWT_SECRET   ? '✅ défini'  : '❌ MANQUANT');
+
+  // 1. HTTP FIRST — Railway healthcheck
+  await new Promise(resolve => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log('✅ Serveur HTTP démarré sur port', PORT);
+      resolve();
+    });
+  });
+
+  // 2. DB ensuite
+  try {
+    const { db, connectRedis } = require('./config/database');
+    await db.query('SELECT 1');
+    console.log('✅ PostgreSQL connecté');
+    await connectRedis();
+    if (process.env.NODE_ENV !== 'test') {
+      try { require('./services/cronService').initCrons(); } catch(e) { console.warn('Crons:', e.message); }
+    }
+    await loadRoutes();
+    console.log('🎉 PayMe Africa opérationnel sur port', PORT);
+  } catch (err) {
+    console.error('❌ Erreur DB:', err.message);
+    await loadRoutes();
+  }
+}
+
+start().catch(err => { console.error('💀 Fatal:', err.message); process.exit(1); });
 
 module.exports = app;
