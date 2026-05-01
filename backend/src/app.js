@@ -44,8 +44,8 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Trop de tentatives. Attendez 15 minutes.' },
 });
 
-// ── HEALTH (immédiat, sans DB — critique pour Railway) ───────────────
-app.get('/health', (req, res) => {
+// ── HEALTH (sans DB — critique pour Railway healthcheck) ─────────────
+app.get('/health', (_req, res) => {
   res.json({
     success: true,
     status:  'ok',
@@ -55,47 +55,27 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ── ROUTES (lazy load avec try/catch pour la résilience Railway) ─────
-let routesLoaded = false;
+// ── ROUTES ───────────────────────────────────────────────────────────
+app.use('/auth',          authLimiter, require('./routes/auth'));
+app.use('/merchants',     require('./routes/merchants'));
+app.use('/transactions',  require('./routes/transactions'));
+app.use('/catalog',       require('./routes/catalog'));
+app.use('/reports',       require('./routes/reports'));
+app.use('/employees',     require('./routes/employees'));
+app.use('/notifications', require('./routes/notifications'));
 
-async function loadRoutes() {
-  if (routesLoaded) return;
-  try {
-    const authRoutes        = require('./routes/auth');
-    const merchantRoutes    = require('./routes/merchants');
-    const transactionRoutes = require('./routes/transactions');
-    const catalogRoutes     = require('./routes/catalog');
-    const reportRoutes      = require('./routes/reports');
-    const employeeRoutes    = require('./routes/employees');
-    const notifRoutes       = require('./routes/notifications');
+// ── GESTION D'ERREURS (toujours après les routes) ────────────────────
+app.use((_req, res) => {
+  res.status(404).json({ success: false, message: 'Route introuvable', code: 'NOT_FOUND' });
+});
 
-    app.use('/auth',          authLimiter, authRoutes);
-    app.use('/merchants',     merchantRoutes);
-    app.use('/transactions',  transactionRoutes);
-    app.use('/catalog',       catalogRoutes);
-    app.use('/reports',       reportRoutes);
-    app.use('/employees',     employeeRoutes);
-    app.use('/notifications', notifRoutes);
-
-    // Handlers d'erreur enregistrés APRÈS les routes (ordre Express obligatoire)
-    app.use((req, res) => {
-      res.status(404).json({ success: false, message: 'Route introuvable', code: 'NOT_FOUND' });
-    });
-    app.use((err, req, res, next) => {
-      const status  = err.status  || 500;
-      const code    = err.code    || 'ERREUR_SERVEUR';
-      const message = err.message || 'Erreur interne';
-      console.error(`[ERROR] ${status} ${code}: ${message}`);
-      res.status(status).json({ success: false, message, code });
-    });
-
-    routesLoaded = true;
-    console.log('✅ Routes chargées');
-  } catch (err) {
-    console.error('❌ Erreur chargement routes:', err.message);
-    console.error(err.stack);
-  }
-}
+app.use((err, _req, res, _next) => {
+  const status  = err.status  || 500;
+  const code    = err.code    || 'ERREUR_SERVEUR';
+  const message = err.message || 'Erreur interne';
+  console.error(`[ERROR] ${status} ${code}: ${message}`);
+  res.status(status).json({ success: false, message, code });
+});
 
 // ── DÉMARRAGE ────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '4000');
@@ -115,7 +95,7 @@ async function start() {
     });
   });
 
-  // 2. Connexion DB/Redis (après HTTP)
+  // 2. Connexion DB/Redis (après HTTP — Railway ne tue pas l'app si ça échoue)
   try {
     const { db, connectRedis } = require('./config/database');
     await db.query('SELECT 1');
@@ -123,7 +103,6 @@ async function start() {
 
     await connectRedis();
 
-    // 3. Crons
     if (process.env.NODE_ENV !== 'test') {
       try {
         const { initCrons } = require('./services/cronService');
@@ -133,14 +112,10 @@ async function start() {
       }
     }
 
-    // 4. Routes (après DB)
-    await loadRoutes();
     console.log(`🎉 PayMe Africa opérationnel — http://0.0.0.0:${PORT}`);
-
   } catch (err) {
-    console.error('❌ Erreur connexion DB/Redis:', err.message);
-    // /health répond toujours — on charge les routes sans DB
-    await loadRoutes();
+    console.error('❌ Erreur DB/Redis:', err.message);
+    console.warn('⚠️  API démarrée sans DB — seul /health répond correctement');
   }
 }
 
