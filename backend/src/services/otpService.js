@@ -5,19 +5,12 @@ const OTP_EXPIRES_MINUTES = parseInt(process.env.OTP_EXPIRES_MINUTES || '5');
 const OTP_LENGTH = parseInt(process.env.OTP_LENGTH || '6');
 const MAX_ATTEMPTS = 3;
 
-/**
- * Génère un code OTP numérique
- */
 function generateCode() {
   const min = Math.pow(10, OTP_LENGTH - 1);
   const max = Math.pow(10, OTP_LENGTH) - 1;
   return Math.floor(min + Math.random() * (max - min + 1)).toString();
 }
 
-/**
- * Normalise un numéro de téléphone sénégalais
- * Accepte: 771234567, +221771234567, 00221771234567
- */
 function normalizePhone(phone) {
   let cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
   if (cleaned.startsWith('00221')) cleaned = '+221' + cleaned.slice(5);
@@ -26,19 +19,38 @@ function normalizePhone(phone) {
   return cleaned;
 }
 
-/**
- * Envoie un OTP par SMS (ou simule en dev)
- */
+/** Rate limiting via Redis si disponible, sinon via PostgreSQL */
+async function checkRateLimit(normalizedPhone) {
+  try {
+    if (redisClient.isOpen) {
+      const key = `otp_rate:${normalizedPhone}`;
+      const count = await redisClient.incr(key);
+      if (count === 1) await redisClient.expire(key, 3600);
+      if (count > 3) {
+        throw { code: 'TROP_DE_TENTATIVES', message: 'Trop de demandes. Attendez une heure.' };
+      }
+      return;
+    }
+  } catch (err) {
+    if (err.code === 'TROP_DE_TENTATIVES') throw err;
+    logger.warn('Redis indisponible, fallback rate-limit DB', { error: err.message });
+  }
+
+  // Fallback : compter les OTP créés dans la dernière heure via DB
+  const { rows } = await db.query(
+    `SELECT COUNT(*) AS cnt FROM otps
+     WHERE phone = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+    [normalizedPhone]
+  );
+  if (parseInt(rows[0].cnt) >= 3) {
+    throw { code: 'TROP_DE_TENTATIVES', message: 'Trop de demandes. Attendez une heure.' };
+  }
+}
+
 async function sendOtp(phone, purpose = 'login') {
   const normalizedPhone = normalizePhone(phone);
 
-  // Rate limiting : max 3 OTP par heure
-  const rateLimitKey = `otp_rate:${normalizedPhone}`;
-  const count = await redisClient.incr(rateLimitKey);
-  if (count === 1) await redisClient.expire(rateLimitKey, 3600);
-  if (count > 3) {
-    throw { code: 'TROP_DE_TENTATIVES', message: 'Trop de demandes. Attendez une heure.' };
-  }
+  await checkRateLimit(normalizedPhone);
 
   // Invalider les OTP précédents
   await db.query(
@@ -55,21 +67,18 @@ async function sendOtp(phone, purpose = 'login') {
     [uuidv4(), normalizedPhone, code, purpose, expiresAt]
   );
 
-  // En développement : log le code (pas d'envoi SMS)
   if (process.env.NODE_ENV !== 'production') {
     logger.info(`[DEV] OTP pour ${normalizedPhone}: ${code} (expire dans ${OTP_EXPIRES_MINUTES} min)`);
     return { sent: true, dev_code: code, phone: normalizedPhone };
   }
 
-  // En production : Africa's Talking
   try {
     const AfricasTalking = require('africastalking')({
-      apiKey: process.env.AT_API_KEY,
-      username: process.env.AT_USERNAME,
+      apiKey:    process.env.AT_API_KEY,
+      username:  process.env.AT_USERNAME,
     });
-    const sms = AfricasTalking.SMS;
     const message = `PayMe: votre code est ${code}. Valable ${OTP_EXPIRES_MINUTES} minutes. Ne le partagez pas.`;
-    await sms.send({
+    await AfricasTalking.SMS.send({
       to: [normalizedPhone],
       message,
       from: process.env.AT_SENDER_ID,
@@ -78,13 +87,10 @@ async function sendOtp(phone, purpose = 'login') {
     return { sent: true, phone: normalizedPhone };
   } catch (err) {
     logger.error('Erreur envoi SMS', { error: err.message, phone: normalizedPhone });
-    throw { code: 'ERREUR_SMS', message: 'Impossible d\'envoyer le SMS. Réessayez.' };
+    throw { code: 'ERREUR_SMS', message: "Impossible d'envoyer le SMS. Réessayez." };
   }
 }
 
-/**
- * Vérifie un code OTP
- */
 async function verifyOtp(phone, code, purpose = 'login') {
   const normalizedPhone = normalizePhone(phone);
 
@@ -114,15 +120,10 @@ async function verifyOtp(phone, code, purpose = 'login') {
   if (otp.code !== code) {
     await db.query('UPDATE otps SET attempts = attempts + 1 WHERE id = $1', [otp.id]);
     const remaining = otp.max_attempts - (otp.attempts + 1);
-    throw {
-      code: 'CODE_INCORRECT',
-      message: `Code incorrect. ${remaining} tentative(s) restante(s).`
-    };
+    throw { code: 'CODE_INCORRECT', message: `Code incorrect. ${remaining} tentative(s) restante(s).` };
   }
 
-  // Marquer comme utilisé
   await db.query('UPDATE otps SET is_used = TRUE WHERE id = $1', [otp.id]);
-
   return { verified: true, phone: normalizedPhone };
 }
 

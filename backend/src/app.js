@@ -101,6 +101,10 @@ async function start() {
     await db.query('SELECT 1');
     console.log('✅ PostgreSQL connecté');
 
+    // Migrations automatiques
+    const { runMigrations } = require('./utils/migrate');
+    await runMigrations(db);
+
     await connectRedis();
 
     if (process.env.NODE_ENV !== 'test') {
