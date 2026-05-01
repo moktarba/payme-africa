@@ -11,6 +11,9 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// Requis pour express-rate-limit derrière le proxy Railway/Heroku/Nginx
+app.set('trust proxy', 1);
+
 // ── SÉCURITÉ & MIDDLEWARE ────────────────────────────────────────────
 app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
