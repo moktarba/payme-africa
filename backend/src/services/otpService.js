@@ -50,6 +50,14 @@ async function checkRateLimit(normalizedPhone) {
 async function sendOtp(phone, purpose = 'login') {
   const normalizedPhone = normalizePhone(phone);
 
+  // Pour le login, vérifier que le compte existe avant d'envoyer un SMS
+  if (purpose === 'login') {
+    const { rows } = await db.query('SELECT id FROM merchants WHERE phone = $1', [normalizedPhone]);
+    if (rows.length === 0) {
+      throw { code: 'MERCHANT_INTROUVABLE', message: 'Aucun compte avec ce numéro. Créez un compte.' };
+    }
+  }
+
   await checkRateLimit(normalizedPhone);
 
   // Invalider les OTP précédents

@@ -46,8 +46,12 @@ export default function OtpScreen({ navigation, route }) {
       await setAuth({ accessToken, refreshToken, merchant });
       navigation.replace('Tabs');
     } catch (err) {
-      setError(err.userMessage || 'Code incorrect. Réessayez.');
-      setCode('');
+      if (err.errorCode === 'MERCHANT_INTROUVABLE') {
+        navigation.replace('Register', { phone });
+      } else {
+        setError(err.userMessage || 'Code incorrect. Réessayez.');
+        setCode('');
+      }
     } finally {
       setLoading(false);
     }
