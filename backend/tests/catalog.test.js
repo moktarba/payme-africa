@@ -14,7 +14,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (createdId) await db.query('DELETE FROM catalog_items WHERE id = $1', [createdId]);
-  await db.end(); await redisClient.quit();
 });
 
 describe('GET /catalog', () => {

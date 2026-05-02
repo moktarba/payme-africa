@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
-    "test": "jest --runInBand",
+    "test": "jest --runInBand --forceExit",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "jest --coverage --forceExit",
     "migrate": "node src/utils/migrate.js",
     "seed": "node src/utils/seed.js",
     "lint": "eslint src/**/*.js"
@@ -40,6 +40,7 @@
   "jest": {
     "testEnvironment": "node",
     "testMatch": ["**/tests/**/*.test.js"],
+    "globalSetup": "./tests/globalSetup.js",
     "setupFiles": ["./tests/setup.js"]
   }
 }

@@ -11,10 +11,7 @@ beforeAll(async () => {
   accessToken = res.body.accessToken;
 });
 
-afterAll(async () => {
-  await db.end();
-  await redisClient.quit();
-});
+afterAll(async () => { /* --forceExit handles pool teardown */ });
 
 describe('GET /reports/day', () => {
   it('retourne le rapport du jour', async () => {

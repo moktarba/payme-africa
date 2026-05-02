@@ -123,9 +123,12 @@ async function start() {
   }
 }
 
-start().catch(err => {
-  console.error('💀 Crash fatal:', err.message);
-  process.exit(1);
-});
-
 module.exports = app;
+
+// Only start when run directly — not when required by tests
+if (require.main === module) {
+  start().catch(err => {
+    console.error('💀 Crash fatal:', err.message);
+    process.exit(1);
+  });
+}

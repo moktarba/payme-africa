@@ -23,8 +23,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.query('DELETE FROM transactions WHERE merchant_id = $1 AND client_reference LIKE $2', [TEST_MERCHANT_ID, 'test-tx-%']);
-  await db.end();
-  await redisClient.quit();
 });
 
 describe('POST /transactions', () => {

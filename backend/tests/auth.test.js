@@ -21,8 +21,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.query('DELETE FROM merchants WHERE phone = $1', [testPhone]);
   await db.query('DELETE FROM otps WHERE phone = $1', [testPhone]);
-  await db.end();
-  await redisClient.quit();
 });
 
 describe('POST /auth/register', () => {

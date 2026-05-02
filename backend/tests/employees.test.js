@@ -14,8 +14,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.query('DELETE FROM employees WHERE merchant_id = $1 AND name LIKE $2', [MERCHANT_ID, 'Test%']);
-  await db.end();
-  await redisClient.quit();
 });
 
 describe('GET /employees', () => {

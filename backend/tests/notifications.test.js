@@ -11,7 +11,7 @@ beforeAll(async () => {
   token = res.body.accessToken;
 });
 
-afterAll(async () => { await db.end(); await redisClient.quit(); });
+afterAll(async () => { /* --forceExit handles pool teardown */ });
 
 describe('GET /notifications', () => {
   it('liste les notifications', async () => {
