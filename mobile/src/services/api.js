@@ -94,4 +94,30 @@ export const catalogApi = {
   deleteItem: (id) => api.delete(`/catalog/${id}`),
 };
 
+export const employeeApi = {
+  list: () => api.get('/employees'),
+  getStats: () => api.get('/employees/stats'),
+  create: (data) => api.post('/employees', data),
+  update: (id, data) => api.put(`/employees/${id}`, data),
+  setPin: (id, pin) => api.post(`/employees/${id}/pin`, { pin }),
+  deactivate: (id) => api.delete(`/employees/${id}`),
+  loginPin: (merchantId, employeeId, pin) => api.post('/employees/login-pin', { merchantId, employeeId, pin }),
+};
+
+export const notificationApi = {
+  list: (params) => api.get('/notifications', { params }),
+  markRead: (ids) => api.post('/notifications/read', { ids }),
+  markAllRead: () => api.post('/notifications/read', { all: true }),
+  getPreferences: () => api.get('/notifications/preferences'),
+  updatePreferences: (prefs) => api.put('/notifications/preferences', prefs),
+};
+
+export const reportApi = {
+  getDay: (date) => api.get('/reports/day', { params: date ? { date } : {} }),
+  getWeek: () => api.get('/reports/week'),
+  getMonth: (year, month) => api.get('/reports/month', { params: { year, month } }),
+  getTopItems: (limit = 5) => api.get('/reports/top-items', { params: { limit } }),
+  exportCSV: (params) => api.get('/reports/export', { params, responseType: 'text' }),
+};
+
 export default api;
