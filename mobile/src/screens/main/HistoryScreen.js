@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, FlatList,
-  TouchableOpacity, RefreshControl, ActivityIndicator
+  TouchableOpacity, RefreshControl, ActivityIndicator, Share
 } from 'react-native';
 import { StatusBadge, EmptyState } from '../../components/ui';
 import {
@@ -51,7 +51,23 @@ export default function HistoryScreen({ navigation }) {
 
   useEffect(() => { setLoading(true); setOffset(0); load(true); }, [filter]);
 
-  const icons = { wave: '🌊', orange_money: '🟠', cash: '💵' };
+  const icons = { wave: '🌊', orange_money: '🟠', cash: '💵', free_money: '🔴' };
+
+  const handleShare = async (tx) => {
+    const ref  = tx.id?.slice(0, 8).toUpperCase();
+    const date = dayjs(tx.createdAt).format('DD/MM/YYYY HH:mm');
+    const text = [
+      '✅ Reçu PayMe Africa',
+      '─────────────────────',
+      `Montant : ${formatAmount(tx.amount)}`,
+      `Mode    : ${PROVIDER_LABELS[tx.paymentProvider] || tx.paymentProvider}`,
+      `Date    : ${date}`,
+      `Réf.    : ${ref}`,
+      '─────────────────────',
+      'Merci pour votre achat !',
+    ].join('\n');
+    try { await Share.share({ message: text, title: 'Reçu PayMe Africa' }); } catch (_) {}
+  };
 
   const renderItem = ({ item: tx }) => (
     <TouchableOpacity
@@ -70,6 +86,15 @@ export default function HistoryScreen({ navigation }) {
       <View style={styles.txRight}>
         <Text style={styles.txAmount}>{formatAmount(tx.amount)}</Text>
         <StatusBadge status={tx.paymentStatus} />
+        {tx.paymentStatus === 'completed' && (
+          <TouchableOpacity
+            onPress={() => handleShare(tx)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.shareBtn}
+          >
+            <Text style={styles.shareBtnIcon}>📤</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -133,5 +158,7 @@ const styles = StyleSheet.create({
   txNote: { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginTop: 1 },
   txDate: { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginTop: 2 },
   txRight: { alignItems: 'flex-end', gap: 4 },
-  txAmount: { fontSize: Typography.fontSizeLG, fontWeight: Typography.fontWeightBold, color: Colors.gray900 },
+  txAmount:      { fontSize: Typography.fontSizeLG, fontWeight: Typography.fontWeightBold, color: Colors.gray900 },
+  shareBtn:      { marginTop: 4, alignItems: 'center' },
+  shareBtnIcon:  { fontSize: 15 },
 });
