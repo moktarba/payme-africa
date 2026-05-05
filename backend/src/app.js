@@ -46,12 +46,15 @@ const authLimiter = rateLimit({
 
 // ── HEALTH (sans DB — critique pour Railway healthcheck) ─────────────
 app.get('/health', (_req, res) => {
+  const { redisClient } = require('./config/database');
   res.json({
     success: true,
     status:  'ok',
     version: '1.0.0',
     env:     process.env.NODE_ENV || 'development',
     ts:      new Date().toISOString(),
+    redis:   redisClient.isOpen ? 'connected' : (process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL ? 'disconnected' : 'not_configured'),
+    db:      !!process.env.DATABASE_URL,
   });
 });
 

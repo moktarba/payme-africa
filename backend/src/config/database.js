@@ -41,25 +41,33 @@ const db = process.env.DATABASE_URL
 db.on('error', err => logger.error('PostgreSQL error', { message: err.message }));
 
 // ── REDIS ────────────────────────────────────────────────────────────
-// Railway injecte REDIS_URL automatiquement
+// Railway expose REDIS_URL (variable référencée) ou REDIS_PRIVATE_URL (plugin natif)
+const REDIS_URL =
+  process.env.REDIS_URL ||
+  process.env.REDIS_PRIVATE_URL ||
+  process.env.REDIS_URI ||
+  (process.env.REDIS_HOST
+    ? `redis://${process.env.REDIS_PASSWORD ? `:${process.env.REDIS_PASSWORD}@` : ''}${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
+    : null);
+
 const redisClient = redis.createClient({
-  url: process.env.REDIS_URL || process.env.REDIS_URI ||
-       `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
-  ...(process.env.REDIS_PASSWORD ? { password: process.env.REDIS_PASSWORD } : {}),
+  url: REDIS_URL || 'redis://localhost:6379',
+  ...(process.env.REDIS_PASSWORD && !REDIS_URL?.includes('@') ? { password: process.env.REDIS_PASSWORD } : {}),
 });
 
 redisClient.on('error', err => logger.warn('Redis error (non-fatal)', { message: err.message }));
 
 async function connectRedis() {
-  if (process.env.REDIS_URL || process.env.REDIS_URI || process.env.REDIS_HOST) {
+  if (REDIS_URL) {
+    logger.info(`Redis configuré: ${REDIS_URL.replace(/:\/\/.*@/, '://<credentials>@')}`);
     try {
       await redisClient.connect();
       logger.info('✅ Redis connecté');
     } catch (err) {
-      logger.warn('⚠️  Redis non disponible — fonctionnement dégradé (pas de cache/sessions Redis)');
+      logger.warn('⚠️  Redis non disponible — fonctionnement dégradé', { error: err.message });
     }
   } else {
-    logger.info('⚠️  Redis non configuré — skip');
+    logger.info('⚠️  Redis non configuré — fallback DB activé');
   }
 }
 
