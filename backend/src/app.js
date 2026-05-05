@@ -44,14 +44,6 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Trop de tentatives. Attendez 15 minutes.' },
 });
 
-// ── DEBUG (temporaire — supprimer après diagnostic) ──────────────────
-app.get('/_debug_env', (_req, res) => {
-  const redisVars = Object.entries(process.env)
-    .filter(([k]) => /redis/i.test(k))
-    .reduce((acc, [k, v]) => ({ ...acc, [k]: v?.slice(0, 30) + '...' }), {});
-  res.json({ redisVars, nodeEnv: process.env.NODE_ENV });
-});
-
 // ── HEALTH (sans DB — critique pour Railway healthcheck) ─────────────
 app.get('/health', (_req, res) => {
   const { redisClient } = require('./config/database');
