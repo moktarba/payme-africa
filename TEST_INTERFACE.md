@@ -632,3 +632,27 @@ Resultats :
 
 - QA offline : OK.
 - QA receipt : OK.
+
+## Lot fondation mobile API/store/theme - 2026-05-26
+
+Commit associe :
+
+```text
+a291d5a feat: align mobile demo API and store
+```
+
+Commandes executees :
+
+```powershell
+npm run qa:real
+npm run qa:offline
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:demo
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:history
+```
+
+Resultats :
+
+- QA backend reel : OK.
+- QA offline : OK.
+- QA demo : OK.
+- QA history : OK.

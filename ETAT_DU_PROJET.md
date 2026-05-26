@@ -854,3 +854,24 @@ Verification :
 
 - `npm run qa:offline` OK ;
 - `npm run qa:receipt` OK.
+
+### Lot fondation mobile API/store/theme - 2026-05-26
+
+Commit cree :
+
+```text
+a291d5a feat: align mobile demo API and store
+```
+
+Etat :
+
+- le store sait restaurer une session demo ;
+- la couche API mobile couvre mieux demo/reel et les messages d'erreur ;
+- les ecrans ne sont pas encore commites dans ce lot.
+
+Verification :
+
+- `npm run qa:real` OK ;
+- `npm run qa:offline` OK ;
+- `npm run qa:demo` OK ;
+- `npm run qa:history` OK.

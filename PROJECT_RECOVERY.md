@@ -974,3 +974,43 @@ Prochaine etape mobile :
 
 - Auditer `mobile/src/store/useStore.js`, `mobile/src/utils/theme.js` et `mobile/src/services/api.js`.
 - Les ecrans restent hors du prochain lot tant que la couche API/store n'est pas figee.
+
+### Commit fondation mobile API/store/theme - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Commit cree :
+
+```text
+a291d5a feat: align mobile demo API and store
+```
+
+Contenu :
+
+- mode demo restaure automatiquement dans le store ;
+- API mobile enrichie pour demo, erreurs lisibles et endpoints MVP ;
+- ajustements theme/formatage compatibles QA.
+
+Commandes executees :
+
+```powershell
+npm run qa:real
+npm run qa:offline
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:demo
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:history
+```
+
+Resultats :
+
+- `qa:real` : OK.
+- `qa:offline` : OK.
+- `qa:demo` : OK.
+- `qa:history` : OK.
+
+Prochaine etape :
+
+- Auditer les ecrans mobiles par groupes de 3 fichiers maximum.
