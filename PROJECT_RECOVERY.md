@@ -866,3 +866,36 @@ npx jest tests/employees.test.js --runInBand --forceExit
 Resultat :
 
 - `employees.test.js` : OK, 7 tests.
+
+### Commit auth/OTP dev QA - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Commit cree :
+
+```text
+32f9291 fix: stabilize OTP validation for dev QA
+```
+
+Contenu :
+
+- `purpose` accepte dans `/auth/send-otp` ;
+- rate limit OTP desactive explicitement en test et via `DISABLE_OTP_RATE_LIMIT=true` pour les QA locales.
+
+Commandes executees :
+
+```powershell
+cd backend
+npx jest tests/auth.test.js --runInBand --forceExit
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+```
+
+Resultats :
+
+- `auth.test.js` : OK, 7 tests.
+- `qa:real` : OK.

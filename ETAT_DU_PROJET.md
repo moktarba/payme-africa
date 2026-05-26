@@ -793,3 +793,21 @@ Etat :
 Verification :
 
 - `npx jest tests/employees.test.js --runInBand --forceExit` OK, 7 tests.
+
+### Lot auth/OTP dev QA - 2026-05-26
+
+Commit cree :
+
+```text
+32f9291 fix: stabilize OTP validation for dev QA
+```
+
+Etat :
+
+- `/auth/send-otp` accepte le champ optionnel `purpose` ;
+- les tests et QA locales peuvent contourner le rate limit OTP sans impacter le defaut production.
+
+Verification :
+
+- `npx jest tests/auth.test.js --runInBand --forceExit` OK, 7 tests ;
+- `npm run qa:real` OK.
