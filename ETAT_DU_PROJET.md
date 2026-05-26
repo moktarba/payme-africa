@@ -660,7 +660,7 @@ Prochain lot recommande :
 
 ### Lot documentaire commite - 2026-05-26
 
-Commit local cree :
+Commit pousse :
 
 ```text
 0826d8f docs: add SMART sprint roadmap and beta planning
@@ -673,3 +673,19 @@ Reste a traiter :
 - lot scripts QA/lancement ;
 - lot backend/mobile fonctionnel ;
 - nettoyage eventuel de l'encodage historique, dans une etape dediee.
+
+### Revue scripts QA/lancement - 2026-05-26
+
+Le lot scripts en attente ajoute les commandes `npm run ui:*`, `npm run qa:*`, `npm run api:local`, `npm run otp` et `npm run dev:stop`.
+
+Validation effectuee :
+
+- `package.json` parse correctement ;
+- backend Jest OK, 7 suites et 39 tests ;
+- `qa:real`, `qa:demo`, `qa:history`, `qa:offline`, `qa:receipt` OK ;
+- `qa:keypad` OK avec `QA_CHROME_PORT=9561` apres timeout du port par defaut.
+
+Decision :
+
+- le lot peut etre commite comme lot outillage/QA ;
+- ne pas inclure les changements backend/mobile fonctionnels dans ce commit.

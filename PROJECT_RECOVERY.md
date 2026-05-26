@@ -667,12 +667,45 @@ Fichiers modifies :
 
 Etat Git :
 
-- Commit local cree : `0826d8f docs: add SMART sprint roadmap and beta planning`.
+- Commit pousse : `0826d8f docs: add SMART sprint roadmap and beta planning`.
 - Contenu : documents Scrum/SMART, sprints 1 a 5, sprints 6+, test faible connexion et index `docs/README.md`.
 - Aucun fichier backend, mobile, migration, script QA ou configuration runtime n'a ete inclus dans ce commit.
 
 Prochaine etape recommandee :
 
-- Pousser le lot documentaire.
-- Ensuite traiter le lot scripts QA/lancement (`package.json`, `scripts/*`, `backend/Dockerfile.dev`) apres revue.
+- Traiter le lot scripts QA/lancement (`package.json`, `scripts/*`, `backend/Dockerfile.dev`) apres revue.
 - Les changements fonctionnels backend/mobile restent en attente d'audit fichier par fichier.
+
+### Revue lot scripts QA/lancement - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Commandes executees avant commit scripts :
+
+```powershell
+node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json OK')"
+cd backend
+npm test
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+npm run qa:offline
+npm run qa:receipt
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:demo
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:history
+$env:QA_APP_URL='http://127.0.0.1:8081'; $env:QA_CHROME_PORT='9561'; node scripts/qa-keypad-flow.js
+```
+
+Resultats :
+
+- `package.json` : JSON valide.
+- Tests backend : OK, 7 suites, 39 tests.
+- `qa:real`, `qa:offline`, `qa:receipt`, `qa:demo`, `qa:history` : OK.
+- `qa:keypad` : OK avec `QA_CHROME_PORT=9561`.
+
+Point d'attention :
+
+- `qa:keypad` a expire sur le port par defaut `9361` apres une execution bloquee precedente ; utiliser un port Chrome frais si cela se reproduit.

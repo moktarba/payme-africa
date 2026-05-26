@@ -406,7 +406,7 @@ Le prochain commit peut etre documentaire uniquement. Il ne doit pas modifier l'
 
 ## Lot documentaire apres validation - 2026-05-26
 
-Le commit documentaire local `0826d8f docs: add SMART sprint roadmap and beta planning` ne change aucun test ni comportement d'interface.
+Le commit documentaire pousse `0826d8f docs: add SMART sprint roadmap and beta planning` ne change aucun test ni comportement d'interface.
 
 Commandes de test a relancer avant le prochain lot technique :
 
@@ -420,3 +420,31 @@ npm run qa:offline
 ```
 
 Pour le lot scripts QA/lancement, verifier aussi les commandes ajoutees dans `package.json` avant commit.
+
+## Verification lot scripts QA/lancement - 2026-05-26
+
+Commandes validees :
+
+```powershell
+node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json OK')"
+cd backend
+npm test
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+npm run qa:offline
+npm run qa:receipt
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:demo
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:history
+$env:QA_APP_URL='http://127.0.0.1:8081'; $env:QA_CHROME_PORT='9561'; node scripts/qa-keypad-flow.js
+```
+
+Resultats :
+
+- OK pour backend, API reelle, demo, historique, offline, recu et keypad.
+- Si `npm run qa:keypad` expire sur le port Chrome par defaut, relancer avec un port libre :
+
+```powershell
+$env:QA_APP_URL='http://127.0.0.1:8081'
+$env:QA_CHROME_PORT='9561'
+node scripts/qa-keypad-flow.js
+```
