@@ -692,7 +692,7 @@ Decision :
 
 ### Lot scripts QA/lancement commite - 2026-05-26
 
-Commit local cree :
+Commit pousse :
 
 ```text
 6656485 test: add local launch and QA scripts
@@ -705,3 +705,35 @@ Reste prioritaire :
 - revue backend/mobile fonctionnelle ;
 - verification des migrations `002_*` ;
 - controle de l'encodage des fichiers historiques.
+
+### Audit infra locale - 2026-05-26
+
+Le prochain lot technique reste limite a trois fichiers :
+
+- `.gitignore` ;
+- `docker-compose.yml` ;
+- `backend/src/config/database.js`.
+
+Ce lot ne doit pas modifier les routes, services metier, migrations ou ecrans mobile.
+
+Objectif :
+
+- fiabiliser le lancement Docker de developpement ;
+- garder les artefacts de build/CDP hors Git ;
+- documenter le fallback Redis desactive par configuration.
+
+Validation :
+
+- `docker compose config` OK ;
+- backend Jest OK, 7 suites et 39 tests ;
+- `qa:real` OK contre `http://127.0.0.1:4000`.
+
+Commit cree :
+
+```text
+7f49b68 chore: stabilize local docker infra
+```
+
+Risque suivant :
+
+- les deux fichiers SQL `002_*` et le runner `backend/src/utils/migrate.js` doivent etre audites ensemble.

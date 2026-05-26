@@ -451,7 +451,7 @@ node scripts/qa-keypad-flow.js
 
 ## Lot scripts commite - 2026-05-26
 
-Commit local :
+Commit pousse :
 
 ```text
 6656485 test: add local launch and QA scripts
@@ -466,3 +466,41 @@ Commandes principales maintenant documentees par `package.json` :
 - `npm run qa:real`
 - `npm run qa:demo`
 - `npm run qa:offline`
+
+## Verification prevue lot infra locale - 2026-05-26
+
+Avant commit du lot `.gitignore` / `docker-compose.yml` / `backend/src/config/database.js`, relancer :
+
+```powershell
+docker compose config
+cd backend
+npm test
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+```
+
+Si `docker compose config` echoue, ne pas commiter le lot infra.
+
+## Validation lot infra locale - 2026-05-26
+
+Commandes executees :
+
+```powershell
+docker compose config
+cd backend
+npm test
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+```
+
+Resultats :
+
+- Docker Compose config : OK.
+- Backend Jest : OK, 7 suites, 39 tests.
+- QA backend reel : OK.
+
+Commit associe :
+
+```text
+7f49b68 chore: stabilize local docker infra
+```

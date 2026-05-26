@@ -720,11 +720,54 @@ Fichiers modifies :
 
 Etat Git :
 
-- Commit local cree : `6656485 test: add local launch and QA scripts`.
+- Commit pousse : `6656485 test: add local launch and QA scripts`.
 - Contenu : commandes npm de lancement, scripts QA navigateur/API, serveur statique local, demande OTP, Dockerfile dev backend.
 - Le lot ne contient pas les changements fonctionnels backend/mobile encore en attente.
 
 Prochaine etape :
 
-- Pousser le commit scripts.
-- Auditer ensuite les changements backend/mobile restants fichier par fichier avant tout commit fonctionnel.
+- Auditer les changements restants fichier par fichier avant tout commit fonctionnel.
+- Premier lot technique autorise : infra locale uniquement (`.gitignore`, `docker-compose.yml`, `backend/src/config/database.js`).
+- Les migrations, services backend et ecrans mobile restent hors de ce lot.
+
+### Audit lot infra locale - 2026-05-26
+
+Fichiers concernes :
+
+- `.gitignore`
+- `docker-compose.yml`
+- `backend/src/config/database.js`
+
+Intention :
+
+- ignorer les builds Expo/CDP generes localement ;
+- utiliser `backend/Dockerfile.dev` pour le backend Docker de developpement ;
+- permettre de desactiver Redis via `DISABLE_REDIS=true` sans casser le demarrage local.
+
+Commandes a lancer avant commit infra :
+
+```powershell
+docker compose config
+cd backend
+npm test
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+```
+
+Resultats observes :
+
+- `docker compose config` : OK.
+- `cd backend && npm test` : OK, 7 suites, 39 tests.
+- `$env:API_URL='http://127.0.0.1:4000'; npm run qa:real` : OK.
+
+Commit cree :
+
+```text
+7f49b68 chore: stabilize local docker infra
+```
+
+Prochaine etape :
+
+- Auditer le lot migrations/runner sans toucher au mobile.
+- Les fichiers candidats sont `backend/src/utils/migrate.js`, `database/migrations/002_employees.sql` et `database/migrations/002_employees_notifications.sql`.
+- Point de vigilance : deux migrations `002_*` coexistent ; ne pas changer l'ordre ou supprimer sans validation par tests.
