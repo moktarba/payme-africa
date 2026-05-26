@@ -737,3 +737,22 @@ Commit cree :
 Risque suivant :
 
 - les deux fichiers SQL `002_*` et le runner `backend/src/utils/migrate.js` doivent etre audites ensemble.
+
+### Lot migrations/runner commite - 2026-05-26
+
+Commit cree :
+
+```text
+1260f0a fix: make employee notification migrations idempotent
+```
+
+Decision :
+
+- conserver les deux migrations `002_*` ;
+- les rendre idempotentes au lieu de supprimer une migration ;
+- garder le runner JS compatible avec les colonnes employees/sessions/preferences utilisees par les services.
+
+Prochaine zone a auditer :
+
+- services backend : auth, OTP, employee, notification, transaction ;
+- tests backend associes.

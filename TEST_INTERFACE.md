@@ -504,3 +504,25 @@ Commit associe :
 ```text
 7f49b68 chore: stabilize local docker infra
 ```
+
+## Lot migrations/runner - 2026-05-26
+
+Commit associe :
+
+```text
+1260f0a fix: make employee notification migrations idempotent
+```
+
+Validation disponible avant commit :
+
+- `cd backend && npm test` : OK, 7 suites, 39 tests.
+- `$env:API_URL='http://127.0.0.1:4000'; npm run qa:real` : OK.
+
+Avant le prochain commit backend, relancer au minimum :
+
+```powershell
+cd backend
+npm test
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+```

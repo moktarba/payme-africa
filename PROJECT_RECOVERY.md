@@ -771,3 +771,33 @@ Prochaine etape :
 - Auditer le lot migrations/runner sans toucher au mobile.
 - Les fichiers candidats sont `backend/src/utils/migrate.js`, `database/migrations/002_employees.sql` et `database/migrations/002_employees_notifications.sql`.
 - Point de vigilance : deux migrations `002_*` coexistent ; ne pas changer l'ordre ou supprimer sans validation par tests.
+
+### Commit migrations/runner - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Commit cree :
+
+```text
+1260f0a fix: make employee notification migrations idempotent
+```
+
+Contenu :
+
+- alignement du runner `backend/src/utils/migrate.js` avec les colonnes attendues ;
+- migrations SQL `002_*` rendues plus tolerantes avec `IF NOT EXISTS` ;
+- conservation des deux fichiers `002_*` pour ne pas casser l'historique Docker existant.
+
+Validation :
+
+- Les tests backend avaient ete relances avant ce commit : OK, 7 suites, 39 tests.
+- `qa:real` avait ete relance avant ce commit : OK.
+
+Prochaine etape :
+
+- Auditer les services backend et tests associes.
+- Ne pas toucher au mobile dans le meme lot.
