@@ -1,6 +1,5 @@
 const request = require('supertest');
 const app = require('../src/app');
-const { db, redisClient } = require('../src/config/database');
 
 let token;
 
@@ -11,14 +10,13 @@ beforeAll(async () => {
   token = res.body.accessToken;
 });
 
-afterAll(async () => { /* --forceExit handles pool teardown */ });
-
 describe('GET /notifications', () => {
   it('liste les notifications', async () => {
     const res = await request(app).get('/notifications').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.notifications)).toBe(true);
     expect(typeof res.body.unreadCount).toBe('number');
+    expect(typeof res.body.total).toBe('number');
   });
 
   it('filtre les non-lues', async () => {
@@ -41,7 +39,7 @@ describe('POST /notifications/read', () => {
 });
 
 describe('GET /notifications/preferences', () => {
-  it('retourne les préférences', async () => {
+  it('retourne les preferences', async () => {
     const res = await request(app)
       .get('/notifications/preferences')
       .set('Authorization', `Bearer ${token}`);
@@ -52,11 +50,32 @@ describe('GET /notifications/preferences', () => {
 });
 
 describe('PUT /notifications/preferences', () => {
-  it('met à jour les préférences', async () => {
+  it('met a jour les preferences', async () => {
     const res = await request(app)
       .put('/notifications/preferences')
       .set('Authorization', `Bearer ${token}`)
       .send({ txConfirmed: false, dailySummary: true, txPending: false, employeeLogin: true });
     expect(res.status).toBe(200);
+  });
+
+  it('conserve les autres preferences lors d une mise a jour partielle', async () => {
+    await request(app)
+      .put('/notifications/preferences')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ txConfirmed: false, dailySummary: true, txPending: false, employeeLogin: true });
+
+    const res = await request(app)
+      .put('/notifications/preferences')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ dailySummary: false });
+    expect(res.status).toBe(200);
+
+    const prefs = await request(app)
+      .get('/notifications/preferences')
+      .set('Authorization', `Bearer ${token}`);
+    expect(prefs.body.preferences.txConfirmed).toBe(false);
+    expect(prefs.body.preferences.txPending).toBe(false);
+    expect(prefs.body.preferences.dailySummary).toBe(false);
+    expect(prefs.body.preferences.employeeLogin).toBe(true);
   });
 });
