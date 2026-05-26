@@ -1,27 +1,24 @@
 /**
  * Design System - PayMe Africa
- * 
- * UX Principles:
- * - Lisible en plein soleil (fort contraste)
- * - Boutons larges (min 56px hauteur)
- * - Texte minimum 16px
+ *
+ * UX principles:
+ * - Lisible en plein soleil avec un contraste fort
+ * - Boutons larges, minimum 56 px de hauteur
+ * - Texte minimum 16 px
  * - Couleurs sobres et rassurantes
- * - Vert foncé = couleur primaire (argent, nature, confiance)
+ * - Vert fonce comme couleur primaire: argent, nature, confiance
  */
 
 export const Colors = {
-  // Primaire - Vert forêt (confiance, argent, nature)
   primary: '#1B4332',
   primaryLight: '#2D6A4F',
   primaryDark: '#0F2D1F',
   primaryBg: '#D8F3DC',
 
-  // Secondaire - Or chaud (succès, valeur)
   secondary: '#F4A261',
   secondaryLight: '#F9C784',
   secondaryDark: '#C77A3A',
 
-  // Sémantiques
   success: '#2D6A4F',
   successBg: '#D8F3DC',
   warning: '#E9C46A',
@@ -31,7 +28,6 @@ export const Colors = {
   info: '#2C7BB6',
   infoBg: '#D6EAF8',
 
-  // Neutres
   white: '#FFFFFF',
   black: '#0D0D0D',
   gray50: '#F8F9FA',
@@ -45,13 +41,11 @@ export const Colors = {
   gray800: '#3C4043',
   gray900: '#202124',
 
-  // Providers
   waveColor: '#00BCD4',
   orangeMoneyColor: '#FF6600',
   freeMoneyColor: '#E53935',
   cashColor: '#4CAF50',
 
-  // Background
   background: '#F8F9FA',
   surface: '#FFFFFF',
   border: '#E8EAED',
@@ -60,7 +54,7 @@ export const Colors = {
 export const Typography = {
   fontSizeXS: 12,
   fontSizeSM: 14,
-  fontSizeMD: 16,   // Minimum lisible
+  fontSizeMD: 16,
   fontSizeLG: 18,
   fontSizeXL: 22,
   fontSize2XL: 28,
@@ -116,14 +110,13 @@ export const Shadows = {
 
 export const ButtonHeight = {
   sm: 40,
-  md: 52,    // Standard
-  lg: 64,    // Bouton principal
-  xl: 80,    // Bouton encaissement (tap facile)
+  md: 52,
+  lg: 64,
+  xl: 80,
 };
 
-// Formats monétaires
 export const formatAmount = (amount, currency = 'XOF') => {
-  if (amount === null || amount === undefined) return '—';
+  if (amount === null || amount === undefined) return '-';
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency,
@@ -132,7 +125,6 @@ export const formatAmount = (amount, currency = 'XOF') => {
   }).format(amount);
 };
 
-// Noms des providers
 export const PROVIDER_LABELS = {
   wave: 'Wave',
   orange_money: 'Orange Money',
@@ -147,7 +139,6 @@ export const PROVIDER_COLORS = {
   cash: Colors.cashColor,
 };
 
-// Types d'activité
 export const ACTIVITY_TYPES = [
   { value: 'vendeur_ambulant', label: 'Vendeur ambulant' },
   { value: 'boutique', label: 'Boutique / épicerie' },

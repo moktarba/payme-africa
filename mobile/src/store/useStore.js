@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import { storage } from '../utils/storage';
 
+const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
+const DEMO_MERCHANT = {
+  id: 'demo-merchant',
+  businessName: 'Boutique Aminata',
+  phone: '+221771234567',
+  city: 'Dakar',
+  activityType: 'boutique',
+};
+
 const useStore = create((set) => ({
   merchant: null,
   accessToken: null,
@@ -25,6 +34,17 @@ const useStore = create((set) => ({
   },
 
   restoreSession: async () => {
+    if (DEMO_MODE) {
+      set({
+        accessToken: 'demo-access-token',
+        refreshToken: 'demo-refresh-token',
+        merchant: DEMO_MERCHANT,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      return;
+    }
+
     try {
       const accessToken = await storage.get('accessToken');
       const refreshToken = await storage.get('refreshToken');
