@@ -548,3 +548,22 @@ Resultats :
 
 - Tests transactions : OK, 9 tests.
 - QA backend reel : OK.
+
+## Lot employes PIN/notifications - 2026-05-26
+
+Commit associe :
+
+```text
+627c37a feat: improve employee PIN login visibility
+```
+
+Commande executee :
+
+```powershell
+cd backend
+npx jest tests/employees.test.js --runInBand --forceExit
+```
+
+Resultat :
+
+- Tests employees : OK, 7 tests.

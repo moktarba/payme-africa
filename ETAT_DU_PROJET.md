@@ -775,3 +775,21 @@ Verification :
 
 - `npx jest tests/transactions.test.js --runInBand --forceExit` OK ;
 - `npm run qa:real` OK.
+
+### Lot employes PIN/notifications - 2026-05-26
+
+Commit cree :
+
+```text
+627c37a feat: improve employee PIN login visibility
+```
+
+Etat :
+
+- les employes inactifs ne sont plus listes dans la liste active ;
+- l'API expose `pin_set` au lieu du hash PIN ;
+- la connexion PIN peut creer une notification employee_login si activee.
+
+Verification :
+
+- `npx jest tests/employees.test.js --runInBand --forceExit` OK, 7 tests.

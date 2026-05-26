@@ -835,3 +835,34 @@ Resultats :
 
 - `transactions.test.js` : OK, 9 tests.
 - `qa:real` : OK.
+
+### Commit employes PIN/notifications - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Commit cree :
+
+```text
+627c37a feat: improve employee PIN login visibility
+```
+
+Contenu :
+
+- liste employes limitee aux actifs ;
+- exposition `pin_set` sans exposer le hash PIN ;
+- notification non bloquante lors d'une connexion PIN employee si la preference est active.
+
+Commande executee :
+
+```powershell
+cd backend
+npx jest tests/employees.test.js --runInBand --forceExit
+```
+
+Resultat :
+
+- `employees.test.js` : OK, 7 tests.
