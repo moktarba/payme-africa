@@ -689,3 +689,19 @@ Decision :
 
 - le lot peut etre commite comme lot outillage/QA ;
 - ne pas inclure les changements backend/mobile fonctionnels dans ce commit.
+
+### Lot scripts QA/lancement commite - 2026-05-26
+
+Commit local cree :
+
+```text
+6656485 test: add local launch and QA scripts
+```
+
+Ce commit ajoute l'outillage de lancement et de validation sans demarrer de nouvelle fonctionnalite produit.
+
+Reste prioritaire :
+
+- revue backend/mobile fonctionnelle ;
+- verification des migrations `002_*` ;
+- controle de l'encodage des fichiers historiques.

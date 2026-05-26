@@ -709,3 +709,22 @@ Resultats :
 Point d'attention :
 
 - `qa:keypad` a expire sur le port par defaut `9361` apres une execution bloquee precedente ; utiliser un port Chrome frais si cela se reproduit.
+
+### Commit 3 scripts QA/lancement prepare - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Etat Git :
+
+- Commit local cree : `6656485 test: add local launch and QA scripts`.
+- Contenu : commandes npm de lancement, scripts QA navigateur/API, serveur statique local, demande OTP, Dockerfile dev backend.
+- Le lot ne contient pas les changements fonctionnels backend/mobile encore en attente.
+
+Prochaine etape :
+
+- Pousser le commit scripts.
+- Auditer ensuite les changements backend/mobile restants fichier par fichier avant tout commit fonctionnel.

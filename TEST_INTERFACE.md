@@ -448,3 +448,21 @@ $env:QA_APP_URL='http://127.0.0.1:8081'
 $env:QA_CHROME_PORT='9561'
 node scripts/qa-keypad-flow.js
 ```
+
+## Lot scripts commite - 2026-05-26
+
+Commit local :
+
+```text
+6656485 test: add local launch and QA scripts
+```
+
+Commandes principales maintenant documentees par `package.json` :
+
+- `npm run ui`
+- `npm run ui:demo`
+- `npm run ui:real:local`
+- `npm run api:local`
+- `npm run qa:real`
+- `npm run qa:demo`
+- `npm run qa:offline`
