@@ -801,3 +801,37 @@ Prochaine etape :
 
 - Auditer les services backend et tests associes.
 - Ne pas toucher au mobile dans le meme lot.
+
+### Commit transaction notifications/audit - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Commit cree :
+
+```text
+782c91c feat: add transaction notifications and audit trail
+```
+
+Contenu :
+
+- notifications non bloquantes sur transaction en attente/confirmee ;
+- trace audit a la confirmation et a l'annulation ;
+- tests transaction dedies aux notifications et a l'audit.
+
+Commandes executees :
+
+```powershell
+cd backend
+npx jest tests/transactions.test.js --runInBand --forceExit
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+```
+
+Resultats :
+
+- `transactions.test.js` : OK, 9 tests.
+- `qa:real` : OK.

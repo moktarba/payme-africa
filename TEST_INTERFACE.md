@@ -526,3 +526,25 @@ npm test
 cd ..
 $env:API_URL='http://127.0.0.1:4000'; npm run qa:real
 ```
+
+## Lot transaction notifications/audit - 2026-05-26
+
+Commit associe :
+
+```text
+782c91c feat: add transaction notifications and audit trail
+```
+
+Commandes executees :
+
+```powershell
+cd backend
+npx jest tests/transactions.test.js --runInBand --forceExit
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+```
+
+Resultats :
+
+- Tests transactions : OK, 9 tests.
+- QA backend reel : OK.

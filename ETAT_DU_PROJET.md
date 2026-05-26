@@ -756,3 +756,22 @@ Prochaine zone a auditer :
 
 - services backend : auth, OTP, employee, notification, transaction ;
 - tests backend associes.
+
+### Lot transaction notifications/audit - 2026-05-26
+
+Commit cree :
+
+```text
+782c91c feat: add transaction notifications and audit trail
+```
+
+Etat :
+
+- transaction pending/confirmed cree des notifications selon preferences ;
+- confirmation/annulation ecrit une trace `audit_logs` non bloquante ;
+- le flux API reel reste OK.
+
+Verification :
+
+- `npx jest tests/transactions.test.js --runInBand --forceExit` OK ;
+- `npm run qa:real` OK.
