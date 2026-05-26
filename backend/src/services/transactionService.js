@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { db, logger } = require('../config/database');
 const { getAdapter, isProviderEnabled } = require('../adapters/payment');
+const { notifyTransactionConfirmed, notifyTransactionPending } = require('./notificationService');
 const dayjs = require('dayjs');
 
 /**
@@ -39,7 +40,7 @@ async function initiateTransaction({
     );
     if (existing.rows.length > 0) {
       logger.info('Transaction idempotente retournée', { clientReference });
-      return formatTransaction(existing.rows[0]);
+      return formatInitiatedTransaction(existing.rows[0]);
     }
   }
 
@@ -103,6 +104,10 @@ async function initiateTransaction({
 
   logger.info('Transaction créée', { transactionId, provider: paymentProvider, amount });
 
+  if (['pending', 'awaiting_confirmation'].includes(rows[0].payment_status)) {
+    await safeNotify(() => notifyTransactionPending(merchantId, rows[0], rows[0].employee_name));
+  }
+
   return {
     ...formatTransaction(rows[0]),
     instructions: adapterResult.instructions,
@@ -143,6 +148,20 @@ async function confirmTransaction(transactionId, merchantId) {
 
   logger.info('Transaction confirmée', { transactionId, merchantId });
 
+  await writeAuditLog({
+    merchantId,
+    action: 'transaction_confirmed',
+    transaction: updated[0],
+    payload: {
+      previousStatus: tx.payment_status,
+      newStatus: updated[0].payment_status,
+      amount: updated[0].amount,
+      paymentProvider: updated[0].payment_provider,
+    },
+  });
+
+  await safeNotify(() => notifyTransactionConfirmed(merchantId, updated[0], updated[0].employee_name));
+
   return formatTransaction(updated[0]);
 }
 
@@ -170,6 +189,19 @@ async function cancelTransaction(transactionId, merchantId, reason = null) {
      RETURNING *`,
     [transactionId, merchantId, reason]
   );
+
+  await writeAuditLog({
+    merchantId,
+    action: 'transaction_cancelled',
+    transaction: updated[0],
+    payload: {
+      previousStatus: rows[0].payment_status,
+      newStatus: updated[0].payment_status,
+      amount: updated[0].amount,
+      paymentProvider: updated[0].payment_provider,
+      reason,
+    },
+  });
 
   return formatTransaction(updated[0]);
 }
@@ -279,6 +311,49 @@ function formatTransaction(tx) {
     cancelReason: tx.cancel_reason,
     createdAt: tx.created_at,
   };
+}
+
+function formatInitiatedTransaction(tx, adapterResult = {}) {
+  const manualProviders = new Set(['cash', 'wave', 'orange_money', 'free_money']);
+  return {
+    ...formatTransaction(tx),
+    instructions: adapterResult.instructions,
+    requiresManualConfirmation: adapterResult.requiresManualConfirmation
+      ?? (tx.payment_status === 'awaiting_confirmation' && manualProviders.has(tx.payment_provider)),
+  };
+}
+
+async function safeNotify(callback) {
+  try {
+    await callback();
+  } catch (err) {
+    logger.warn('Notification non bloquante ignoree', { error: err.message || err.code || err });
+  }
+}
+
+async function writeAuditLog({ merchantId, action, transaction, payload = {} }) {
+  try {
+    await db.query(
+      `INSERT INTO audit_logs (merchant_id, action, entity_type, entity_id, payload)
+       VALUES ($1, $2, 'transaction', $3, $4)`,
+      [
+        merchantId,
+        action,
+        transaction.id,
+        JSON.stringify({
+          transactionId: transaction.id,
+          clientReference: transaction.client_reference,
+          ...payload,
+        }),
+      ]
+    );
+  } catch (err) {
+    logger.warn('Audit transaction ignore', {
+      action,
+      transactionId: transaction?.id,
+      error: err.message || err.code || err,
+    });
+  }
 }
 
 module.exports = {

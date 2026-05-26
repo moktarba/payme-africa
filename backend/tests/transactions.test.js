@@ -4,6 +4,12 @@ const { db, redisClient } = require('../src/config/database');
 
 const TEST_MERCHANT_ID = 'a0000000-0000-0000-0000-000000000001';
 let accessToken;
+const testReferences = [
+  'a0000000-0000-0000-0000-000000000099',
+  'a0000000-0000-0000-0000-000000000098',
+  'a0000000-0000-0000-0000-000000000097',
+  'a0000000-0000-0000-0000-000000000096',
+];
 
 beforeAll(async () => {
   // Login avec le marchand de test seed
@@ -22,7 +28,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.query('DELETE FROM transactions WHERE merchant_id = $1 AND client_reference LIKE $2', [TEST_MERCHANT_ID, 'test-tx-%']);
+  await db.query('DELETE FROM notifications WHERE merchant_id = $1 AND data->>\'transactionId\' IN (SELECT id::text FROM transactions WHERE merchant_id = $1 AND client_reference = ANY($2))', [TEST_MERCHANT_ID, testReferences]);
+  await db.query('DELETE FROM audit_logs WHERE merchant_id = $1 AND entity_id IN (SELECT id FROM transactions WHERE merchant_id = $1 AND client_reference = ANY($2))', [TEST_MERCHANT_ID, testReferences]);
+  await db.query('DELETE FROM transactions WHERE merchant_id = $1 AND client_reference = ANY($2)', [TEST_MERCHANT_ID, testReferences]);
 });
 
 describe('POST /transactions', () => {
@@ -82,10 +90,19 @@ describe('POST /transactions/:id/confirm', () => {
   let transactionId;
 
   beforeAll(async () => {
+    await request(app)
+      .put('/notifications/preferences')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ txConfirmed: true, txPending: true });
+
     const res = await request(app)
       .post('/transactions')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ amount: 500, paymentProvider: 'cash' });
+      .send({
+        amount: 500,
+        paymentProvider: 'cash',
+        clientReference: 'a0000000-0000-0000-0000-000000000097',
+      });
 
     transactionId = res.body.transaction.id;
   });
@@ -97,6 +114,68 @@ describe('POST /transactions/:id/confirm', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.transaction.paymentStatus).toBe('completed');
+  });
+
+  it('cree des notifications utiles pour le paiement', async () => {
+    const res = await request(app)
+      .get('/notifications')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    const related = res.body.notifications.filter((notification) =>
+      notification.data?.transactionId === transactionId
+    );
+    expect(related.some((notification) => notification.type === 'transaction_pending')).toBe(true);
+    expect(related.some((notification) => notification.type === 'transaction_confirmed')).toBe(true);
+  });
+
+  it('cree une trace audit a la confirmation', async () => {
+    const res = await db.query(
+      `SELECT action, entity_type, entity_id, payload
+       FROM audit_logs
+       WHERE merchant_id = $1 AND entity_id = $2 AND action = 'transaction_confirmed'`,
+      [TEST_MERCHANT_ID, transactionId]
+    );
+
+    expect(res.rows.length).toBeGreaterThanOrEqual(1);
+    expect(res.rows[0].entity_type).toBe('transaction');
+    expect(res.rows[0].payload.newStatus).toBe('completed');
+  });
+});
+
+describe('POST /transactions/:id/cancel', () => {
+  it('annule avec motif et cree une trace audit', async () => {
+    const created = await request(app)
+      .post('/transactions')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        amount: 750,
+        paymentProvider: 'cash',
+        clientReference: 'a0000000-0000-0000-0000-000000000096',
+      });
+
+    const transactionId = created.body.transaction.id;
+    const reason = 'Paiement non recu';
+
+    const cancelled = await request(app)
+      .post(`/transactions/${transactionId}/cancel`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ reason });
+
+    expect(cancelled.status).toBe(200);
+    expect(cancelled.body.transaction.paymentStatus).toBe('cancelled');
+    expect(cancelled.body.transaction.cancelReason).toBe(reason);
+
+    const audit = await db.query(
+      `SELECT action, entity_type, entity_id, payload
+       FROM audit_logs
+       WHERE merchant_id = $1 AND entity_id = $2 AND action = 'transaction_cancelled'`,
+      [TEST_MERCHANT_ID, transactionId]
+    );
+
+    expect(audit.rows.length).toBe(1);
+    expect(audit.rows[0].entity_type).toBe('transaction');
+    expect(audit.rows[0].payload.reason).toBe(reason);
+    expect(audit.rows[0].payload.newStatus).toBe('cancelled');
   });
 });
 
