@@ -657,3 +657,19 @@ Prochain lot recommande :
 - lot documentaire uniquement : `docs/06` a `docs/14` et `docs/README.md` ;
 - aucun changement applicatif dans ce lot ;
 - verification minimale : `git diff -- docs/README.md`, puis revue des nouveaux fichiers docs.
+
+### Lot documentaire commite - 2026-05-26
+
+Commit local cree :
+
+```text
+0826d8f docs: add SMART sprint roadmap and beta planning
+```
+
+Ce lot ajoute les documents de pilotage agile et beta sans changer le comportement applicatif.
+
+Reste a traiter :
+
+- lot scripts QA/lancement ;
+- lot backend/mobile fonctionnel ;
+- nettoyage eventuel de l'encodage historique, dans une etape dediee.

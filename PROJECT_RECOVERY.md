@@ -656,3 +656,23 @@ git status --short
 Get-ChildItem docs -Filter "*.md"
 git diff -- docs/README.md
 ```
+
+### Commit 2 documentaire prepare - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Etat Git :
+
+- Commit local cree : `0826d8f docs: add SMART sprint roadmap and beta planning`.
+- Contenu : documents Scrum/SMART, sprints 1 a 5, sprints 6+, test faible connexion et index `docs/README.md`.
+- Aucun fichier backend, mobile, migration, script QA ou configuration runtime n'a ete inclus dans ce commit.
+
+Prochaine etape recommandee :
+
+- Pousser le lot documentaire.
+- Ensuite traiter le lot scripts QA/lancement (`package.json`, `scripts/*`, `backend/Dockerfile.dev`) apres revue.
+- Les changements fonctionnels backend/mobile restent en attente d'audit fichier par fichier.

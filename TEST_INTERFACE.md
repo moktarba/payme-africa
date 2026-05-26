@@ -403,3 +403,20 @@ npm run qa:receipt
 ```
 
 Le prochain commit peut etre documentaire uniquement. Il ne doit pas modifier l'interface ni l'API.
+
+## Lot documentaire apres validation - 2026-05-26
+
+Le commit documentaire local `0826d8f docs: add SMART sprint roadmap and beta planning` ne change aucun test ni comportement d'interface.
+
+Commandes de test a relancer avant le prochain lot technique :
+
+```powershell
+cd backend
+npm test
+cd ..
+npm run qa:demo
+npm run qa:real
+npm run qa:offline
+```
+
+Pour le lot scripts QA/lancement, verifier aussi les commandes ajoutees dans `package.json` avant commit.
