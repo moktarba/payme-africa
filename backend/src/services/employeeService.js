@@ -2,14 +2,17 @@ const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const { db, logger } = require('../config/database');
+const { notifyEmployeeLogin } = require('./notificationService');
 
 const ROLES = ['owner', 'manager', 'cashier'];
 
 /** Liste les employés actifs d'un marchand */
 async function listEmployees(merchantId) {
   const { rows } = await db.query(
-    `SELECT id, name, phone, role, is_active, daily_limit, created_at
-     FROM employees WHERE merchant_id = $1 ORDER BY role, name`,
+    `SELECT id, name, phone, role, is_active, daily_limit, pin_hash IS NOT NULL AS pin_set, created_at
+     FROM employees
+     WHERE merchant_id = $1 AND is_active = TRUE
+     ORDER BY role, name`,
     [merchantId]
   );
   return rows;
@@ -43,7 +46,8 @@ async function createEmployee(merchantId, { name, phone, role = 'cashier', pin, 
 
   const { rows } = await db.query(
     `INSERT INTO employees (id, merchant_id, name, phone, role, pin_hash, daily_limit)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, phone, role, is_active, daily_limit, created_at`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, name, phone, role, is_active, daily_limit, pin_hash IS NOT NULL AS pin_set, created_at`,
     [uuidv4(), merchantId, name.trim(), phone || null, role, pinHash, dailyLimit || null]
   );
 
@@ -67,7 +71,7 @@ async function updateEmployee(merchantId, employeeId, updates) {
        daily_limit = COALESCE($4, daily_limit),
        is_active   = COALESCE($5, is_active)
      WHERE id = $6 AND merchant_id = $7
-     RETURNING id, name, phone, role, is_active, daily_limit`,
+     RETURNING id, name, phone, role, is_active, daily_limit, pin_hash IS NOT NULL AS pin_set`,
     [name || null, phone || null, role || null, dailyLimit ?? null, isActive ?? null, employeeId, merchantId]
   );
 
@@ -112,6 +116,8 @@ async function loginWithPin(merchantId, employeeId, pin) {
 
   logger.info('Connexion employé PIN', { merchantId, employeeId: emp.id, role: emp.role });
 
+  await safeNotify(() => notifyEmployeeLogin(merchantId, emp));
+
   return {
     token,
     employee: { id: emp.id, name: emp.name, role: emp.role, dailyLimit: emp.daily_limit },
@@ -138,6 +144,14 @@ async function getEmployeeStats(merchantId) {
     txCount:     parseInt(r.tx_count),
     totalAmount: parseInt(r.total_amount),
   }));
+}
+
+async function safeNotify(callback) {
+  try {
+    await callback();
+  } catch (err) {
+    logger.warn('Notification employe non bloquante ignoree', { error: err.message || err.code || err });
+  }
 }
 
 module.exports = { listEmployees, createEmployee, updateEmployee, setEmployeePin, loginWithPin, getEmployeeStats };
