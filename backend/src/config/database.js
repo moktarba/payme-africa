@@ -42,8 +42,10 @@ db.on('error', err => logger.error('PostgreSQL error', { message: err.message })
 
 // ── REDIS ────────────────────────────────────────────────────────────
 // Railway expose REDIS_URL (variable référencée) ou REDIS_PRIVATE_URL (plugin natif)
-const REDIS_URL =
-  process.env.REDIS_URL ||
+const REDIS_DISABLED = process.env.DISABLE_REDIS === 'true';
+const REDIS_URL = REDIS_DISABLED
+  ? null
+  : process.env.REDIS_URL ||
   process.env.REDIS_PRIVATE_URL ||
   process.env.REDIS_URI ||
   (process.env.REDIS_HOST
@@ -58,6 +60,11 @@ const redisClient = redis.createClient({
 redisClient.on('error', err => logger.warn('Redis error (non-fatal)', { message: err.message }));
 
 async function connectRedis() {
+  if (REDIS_DISABLED) {
+    logger.info('Redis desactive par configuration');
+    return;
+  }
+
   if (REDIS_URL) {
     logger.info(`Redis configuré: ${REDIS_URL.replace(/:\/\/.*@/, '://<credentials>@')}`);
     try {

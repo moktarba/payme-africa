@@ -3,6 +3,11 @@ dist/
 coverage/
 .expo/
 .expo-shared/
+.expo-web-demo/
+.expo-web-real/
+.expo-web-check/
+.chrome-cdp-check/
+.chrome-cdp-check-*/
 .env
 backend/node_modules/
 mobile/node_modules/

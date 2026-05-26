@@ -36,25 +36,26 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: payme_backend
     env_file: .env
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: development
       PORT: 4000
       DB_HOST: postgres
+      DB_PORT: 5432
       REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "4000:4000"
     volumes:
-      - ./backend:/app
+      - ./backend/src:/app/src
       - /app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: npm run dev
     restart: unless-stopped
 
 volumes:
