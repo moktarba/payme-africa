@@ -637,3 +637,23 @@ Message recommande pour le premier commit :
 ```text
 chore: stabilize local MVP recovery flow
 ```
+
+### Commit de stabilisation pousse - 2026-05-26
+
+Le premier lot de reprise est maintenant fige dans GitHub :
+
+- commit : `b3ec034 chore: stabilize local MVP recovery flow` ;
+- branche : `main` synchronisee avec `origin/main` ;
+- contenu : healthcheck backend, test healthcheck, configuration dev documentee, docs de reprise, roadmap SMART consolidee et plan de commit.
+
+Etat courant :
+
+- le MVP local reste stable et reproductible ;
+- le working tree contient encore des changements non commites ;
+- ces changements restants doivent etre classes par lots : documentation sprint, scripts QA, puis backend/mobile fonctionnel.
+
+Prochain lot recommande :
+
+- lot documentaire uniquement : `docs/06` a `docs/14` et `docs/README.md` ;
+- aucun changement applicatif dans ce lot ;
+- verification minimale : `git diff -- docs/README.md`, puis revue des nouveaux fichiers docs.

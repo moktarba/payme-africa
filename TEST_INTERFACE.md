@@ -379,3 +379,27 @@ Etat de test recommande avant demo :
 2. Ouvrir `http://localhost:8082` pour l'interface reelle.
 3. Ouvrir `http://127.0.0.1:8081` pour la demo.
 4. Relancer `qa:real`, `qa:demo`, `qa:keypad`, `qa:history`, `qa:offline`, `qa:receipt`.
+
+## Etat apres push de stabilisation - 2026-05-26
+
+Le lot MVP stable a ete pousse :
+
+```text
+b3ec034 chore: stabilize local MVP recovery flow
+```
+
+Avant toute demo ou nouveau commit, relancer la validation courte :
+
+```powershell
+cd backend
+npm test
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:demo
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:keypad
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:history
+npm run qa:offline
+npm run qa:receipt
+```
+
+Le prochain commit peut etre documentaire uniquement. Il ne doit pas modifier l'interface ni l'API.

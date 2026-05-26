@@ -628,3 +628,31 @@ Fichiers principaux :
 - `docs/16-plan-commit-stabilisation.md`
 
 Voir `docs/16-plan-commit-stabilisation.md` pour les lots suivants.
+
+### Commit 1 pousse - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Etat Git :
+
+- Commit pousse sur `origin/main` : `b3ec034 chore: stabilize local MVP recovery flow`.
+- La branche locale `main` est synchronisee avec `origin/main` pour le lot de stabilisation MVP.
+- Les changements restants du working tree ne sont pas inclus volontairement : ils doivent etre traites par lots separes.
+
+Prochaine etape autorisee :
+
+- Integrer le lot documentaire de roadmap/beta deja prepare dans `docs/06` a `docs/14` et `docs/README.md`, apres revue rapide.
+- Ne pas inclure `.claude/`, `.env`, les builds Expo generes ou les changements fonctionnels backend/mobile dans ce lot.
+- Ne pas demarrer les Sprints 5+ avant validation du backlog et des criteres MVP.
+
+Commandes a lancer pour verifier avant commit documentaire :
+
+```powershell
+git status --short
+Get-ChildItem docs -Filter "*.md"
+git diff -- docs/README.md
+```
