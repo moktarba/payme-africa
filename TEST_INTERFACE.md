@@ -589,3 +589,26 @@ Resultats :
 
 - Tests auth : OK, 7 tests.
 - QA backend reel : OK.
+
+## Lot environnement tests backend - 2026-05-26
+
+Commit associe :
+
+```text
+8e55ffd test: harden backend test environment
+```
+
+Commandes executees :
+
+```powershell
+cd backend
+npx jest tests/notifications.test.js --runInBand --forceExit
+npm test
+```
+
+Resultats :
+
+- Tests notifications : OK, 6 tests.
+- Suite backend complete : OK, 7 suites, 39 tests.
+
+Avant d'attaquer le mobile, relancer aussi les QA interface demo si des ecrans sont modifies.

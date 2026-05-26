@@ -811,3 +811,27 @@ Verification :
 
 - `npx jest tests/auth.test.js --runInBand --forceExit` OK, 7 tests ;
 - `npm run qa:real` OK.
+
+### Lot environnement tests backend - 2026-05-26
+
+Commit cree :
+
+```text
+8e55ffd test: harden backend test environment
+```
+
+Etat :
+
+- Jest lit les `.env` utiles puis force les variables de test ;
+- les variables `TEST_DB_*` et `TEST_DATABASE_URL` sont supportees ;
+- notifications couvre le total pagine et les updates partiels de preferences.
+
+Verification :
+
+- `npx jest tests/notifications.test.js --runInBand --forceExit` OK, 6 tests ;
+- `npm test` backend OK, 7 suites, 39 tests.
+
+Backend :
+
+- Les changements backend restants sont commites.
+- Le prochain bloc non commite est le mobile.

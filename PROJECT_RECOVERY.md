@@ -899,3 +899,41 @@ Resultats :
 
 - `auth.test.js` : OK, 7 tests.
 - `qa:real` : OK.
+
+### Commit environnement tests backend - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Commit cree :
+
+```text
+8e55ffd test: harden backend test environment
+```
+
+Contenu :
+
+- chargement `.env` racine/backend pour Jest ;
+- support explicite des variables `TEST_*` ;
+- tests notifications ajustes pour pagination totale et update partiel des preferences.
+
+Commandes executees :
+
+```powershell
+cd backend
+npx jest tests/notifications.test.js --runInBand --forceExit
+npm test
+```
+
+Resultats :
+
+- `notifications.test.js` : OK, 6 tests.
+- Suite backend complete : OK, 7 suites, 39 tests.
+
+Prochaine etape :
+
+- Backend applicatif stabilise et pousse par lots.
+- Prochain domaine restant : mobile, a auditer ecran par ecran et utilitaire par utilitaire.
