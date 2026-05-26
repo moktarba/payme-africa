@@ -261,33 +261,42 @@ make test-coverage
 - Docker Compose
 - Tests backend
 
-### 🔄 Sprint 1 — Auth terrain (à venir)
-- Tests E2E auth complets
-- Gestion erreur réseau mobile
-- Mode offline basique (queue SQLite)
-- Amélioration UX onboarding
+### ✅ Sprint 1 — Encaissement terrain
+- Encaissement libre et articles rapides
+- Panier multi-achats
+- Confirmation et reçu
+- Historique, stats du jour et rapports
+- Profil, moyens de paiement, employés et notifications
+- Mode demo reproductible
 
-### 🔄 Sprint 2 — Encaissement enrichi
-- Catalogue rapide intégré à l'écran d'encaissement
-- Calcul automatique depuis articles
-- Partage reçu (WhatsApp, SMS)
-- Animation de succès
+### 🔄 Sprint 2 — Stabilisation beta
+- Suite QA demo complète
+- Backend réel validé avec `qa:real`
+- Documentation de lancement fiable
+- Nettoyage du working tree avant commit
 
-### 🔄 Sprint 3 — Wave API + Orange Money
-- Intégration API Wave Business
-- Adaptateur Orange Money
-- Polling statut transaction
-- Webhook reception
+### 🔄 Sprint 3 — Confiance et preuve
+- Reçu partageable mobile
+- Détail transaction renforcé
+- Annulation contrôlée avec motif
+- Audit minimal exploitable
 
-### 🔄 Sprint 4 — Rapports
-- Rapport hebdomadaire
-- Export PDF simple
-- Graphiques ventes
+### 🔄 Sprint 4 — Connexion faible
+- Queue locale cash
+- Synchronisation idempotente
+- Indicateur "à synchroniser"
+- Cache lecture simple
 
-### 🔄 Sprint 5 — Multi-employés + déploiement VPS
-- Gestion rôles basique
-- CI/CD
-- Déploiement production OVH/DigitalOcean
+### 🔄 Sprint 5 — Beta terrain
+- Environnement beta/staging stable
+- Guide testeur
+- KPIs minimum
+- Backlog retours terrain
+
+### 🔄 Sprints 6+ — Croissance et production
+- Wave API puis autres paiements intégrés
+- Ops production, backups, monitoring
+- Employés avancés, dashboard support et fonctionnalités V1 selon retours beta
 
 ---
 
@@ -314,3 +323,35 @@ make health     # Vérifier l'API
 ---
 
 *Construit avec ❤️ pour les commerçants d'Afrique de l'Ouest*
+## Etat MVP stabilise - 2026-05-26
+
+Ce projet a ete repris en mode stabilisation. La source de verite de reprise est `PROJECT_RECOVERY.md`.
+
+Chemin local valide :
+
+```powershell
+docker compose up -d
+powershell -ExecutionPolicy Bypass -File scripts/start-real-interface.ps1 -SkipDocker -ApiUrl http://127.0.0.1:4000
+```
+
+URLs utiles :
+
+- API : `http://127.0.0.1:4000`
+- Interface reelle : `http://localhost:8082` ou `http://127.0.0.1:8082`
+- Demo : `http://127.0.0.1:8081`
+
+Validation courte :
+
+```powershell
+cd backend
+npm test
+cd ..
+$env:API_URL='http://127.0.0.1:4000'; npm run qa:real
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:demo
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:keypad
+$env:QA_APP_URL='http://127.0.0.1:8081'; npm run qa:history
+npm run qa:offline
+npm run qa:receipt
+```
+
+Dernier resultat observe : tout est OK. Les integrations paiement reelles, webhooks, push production, refonte UI et analytics avances restent hors scope tant que cet etat MVP n'est pas fige.

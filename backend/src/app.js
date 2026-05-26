@@ -8,6 +8,7 @@ const cors      = require('cors');
 const helmet    = require('helmet');
 const morgan    = require('morgan');
 const rateLimit = require('express-rate-limit');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -19,7 +20,17 @@ app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:19006').split(',');
+const defaultOrigins = [
+  'http://localhost:19006',
+  'http://localhost:8081',
+  'http://localhost:8082',
+  'http://127.0.0.1:8081',
+  'http://127.0.0.1:8082',
+];
+const allowedOrigins = (process.env.CORS_ORIGINS || defaultOrigins.join(','))
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
@@ -44,9 +55,24 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'Trop de tentatives. Attendez 15 minutes.' },
 });
 
+function getDbHealthConfig() {
+  if (process.env.DATABASE_URL) {
+    return { configured: true, source: 'DATABASE_URL' };
+  }
+
+  const hasLocalConfig = Boolean(process.env.DB_HOST || process.env.DB_NAME || process.env.DB_USER);
+  const usesLocalDefaults = (process.env.NODE_ENV || 'development') !== 'production';
+
+  return {
+    configured: hasLocalConfig || usesLocalDefaults,
+    source: hasLocalConfig ? 'DB_HOST' : (usesLocalDefaults ? 'local_defaults' : 'missing'),
+  };
+}
+
 // ── HEALTH (sans DB — critique pour Railway healthcheck) ─────────────
 app.get('/health', (_req, res) => {
   const { redisClient } = require('./config/database');
+  const dbHealth = getDbHealthConfig();
   res.json({
     success: true,
     status:  'ok',
@@ -54,7 +80,9 @@ app.get('/health', (_req, res) => {
     env:     process.env.NODE_ENV || 'development',
     ts:      new Date().toISOString(),
     redis:   redisClient.isOpen ? 'connected' : (process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL ? 'disconnected' : 'not_configured'),
-    db:      !!process.env.DATABASE_URL,
+    db:      dbHealth.configured,
+    dbSource: dbHealth.source,
+    dbCheck: 'not_checked',
   });
 });
 
@@ -68,17 +96,8 @@ app.use('/employees',     require('./routes/employees'));
 app.use('/notifications', require('./routes/notifications'));
 
 // ── GESTION D'ERREURS (toujours après les routes) ────────────────────
-app.use((_req, res) => {
-  res.status(404).json({ success: false, message: 'Route introuvable', code: 'NOT_FOUND' });
-});
-
-app.use((err, _req, res, _next) => {
-  const status  = err.status  || 500;
-  const code    = err.code    || 'ERREUR_SERVEUR';
-  const message = err.message || 'Erreur interne';
-  console.error(`[ERROR] ${status} ${code}: ${message}`);
-  res.status(status).json({ success: false, message, code });
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // ── DÉMARRAGE ────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '4000');
