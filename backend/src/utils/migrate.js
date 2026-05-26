@@ -184,6 +184,15 @@ const MIGRATIONS = [
       );
       CREATE INDEX IF NOT EXISTS idx_employees_merchant ON employees(merchant_id, is_active);
 
+      ALTER TABLE employees
+        ADD COLUMN IF NOT EXISTS daily_limit INTEGER,
+        ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '{
+          "can_view_reports": false,
+          "can_cancel_transactions": false,
+          "can_manage_catalog": false,
+          "can_manage_employees": false
+        }';
+
       CREATE TABLE IF NOT EXISTS employee_sessions (
         id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         employee_id  UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
@@ -192,6 +201,11 @@ const MIGRATIONS = [
         expires_at   TIMESTAMPTZ NOT NULL,
         created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      ALTER TABLE employee_sessions
+        ADD COLUMN IF NOT EXISTS access_token VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS token_hash VARCHAR(255);
+
       CREATE INDEX IF NOT EXISTS idx_emp_sessions_token ON employee_sessions(access_token);
 
       ALTER TABLE transactions
