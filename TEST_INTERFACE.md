@@ -612,3 +612,23 @@ Resultats :
 - Suite backend complete : OK, 7 suites, 39 tests.
 
 Avant d'attaquer le mobile, relancer aussi les QA interface demo si des ecrans sont modifies.
+
+## Lot utilitaires mobile MVP - 2026-05-26
+
+Commit associe :
+
+```text
+f2b3c10 feat: add mobile cache offline receipt utilities
+```
+
+Commandes executees :
+
+```powershell
+npm run qa:offline
+npm run qa:receipt
+```
+
+Resultats :
+
+- QA offline : OK.
+- QA receipt : OK.

@@ -937,3 +937,40 @@ Prochaine etape :
 
 - Backend applicatif stabilise et pousse par lots.
 - Prochain domaine restant : mobile, a auditer ecran par ecran et utilitaire par utilitaire.
+
+### Commit utilitaires mobile MVP - 2026-05-26
+
+Fichiers modifies :
+
+- `PROJECT_RECOVERY.md`
+- `ETAT_DU_PROJET.md`
+- `TEST_INTERFACE.md`
+
+Commit cree :
+
+```text
+f2b3c10 feat: add mobile cache offline receipt utilities
+```
+
+Contenu :
+
+- cache local de lecture ;
+- queue offline cash avec `clientReference` persistante ;
+- generation/partage de recu texte.
+
+Commandes executees :
+
+```powershell
+npm run qa:offline
+npm run qa:receipt
+```
+
+Resultats :
+
+- `qa:offline` : OK.
+- `qa:receipt` : OK.
+
+Prochaine etape mobile :
+
+- Auditer `mobile/src/store/useStore.js`, `mobile/src/utils/theme.js` et `mobile/src/services/api.js`.
+- Les ecrans restent hors du prochain lot tant que la couche API/store n'est pas figee.

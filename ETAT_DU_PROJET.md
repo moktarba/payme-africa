@@ -835,3 +835,22 @@ Backend :
 
 - Les changements backend restants sont commites.
 - Le prochain bloc non commite est le mobile.
+
+### Lot utilitaires mobile MVP - 2026-05-26
+
+Commit cree :
+
+```text
+f2b3c10 feat: add mobile cache offline receipt utilities
+```
+
+Etat :
+
+- les helpers offline/cache/recu existent dans `mobile/src/utils` ;
+- aucun ecran mobile n'a encore ete commite dans ce lot ;
+- les QA statiques offline et recu sont vertes.
+
+Verification :
+
+- `npm run qa:offline` OK ;
+- `npm run qa:receipt` OK.
