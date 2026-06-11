@@ -66,6 +66,7 @@ app.use('/catalog',       require('./routes/catalog'));
 app.use('/reports',       require('./routes/reports'));
 app.use('/employees',     require('./routes/employees'));
 app.use('/notifications', require('./routes/notifications'));
+app.use('/webhooks',      require('./routes/webhooks'));
 
 // ── GESTION D'ERREURS (toujours après les routes) ────────────────────
 app.use((_req, res) => {

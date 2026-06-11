@@ -111,13 +111,22 @@ async function initiateTransaction({
 }
 
 /**
- * Confirmer manuellement une transaction (cash ou Wave semi-manuel)
+ * Confirmer une transaction.
+ *
+ * @param {string}  transactionId
+ * @param {string|null} merchantId  — null autorisé depuis un webhook (pas de contexte marchand)
+ * @param {object}  [options]
+ * @param {boolean} [options.fromWebhook=false] — si true, retire le filtre merchant_id
  */
-async function confirmTransaction(transactionId, merchantId) {
-  const { rows } = await db.query(
-    `SELECT * FROM transactions WHERE id = $1 AND merchant_id = $2`,
-    [transactionId, merchantId]
-  );
+async function confirmTransaction(transactionId, merchantId, options = {}) {
+  const { fromWebhook = false } = options;
+
+  const selectQuery = fromWebhook
+    ? `SELECT * FROM transactions WHERE id = $1`
+    : `SELECT * FROM transactions WHERE id = $1 AND merchant_id = $2`;
+  const selectParams = fromWebhook ? [transactionId] : [transactionId, merchantId];
+
+  const { rows } = await db.query(selectQuery, selectParams);
 
   if (rows.length === 0) {
     throw { code: 'TRANSACTION_INTROUVABLE', message: 'Transaction introuvable.' };
@@ -126,34 +135,45 @@ async function confirmTransaction(transactionId, merchantId) {
   const tx = rows[0];
 
   if (tx.payment_status === 'completed') {
-    return formatTransaction(tx); // Déjà complétée
+    return formatTransaction(tx); // Déjà complétée — idempotent
   }
 
   if (!['pending', 'awaiting_confirmation'].includes(tx.payment_status)) {
     throw { code: 'STATUT_INVALIDE', message: `Impossible de confirmer une transaction en statut: ${tx.payment_status}` };
   }
 
-  const { rows: updated } = await db.query(
-    `UPDATE transactions 
-     SET payment_status = 'completed', completed_at = NOW()
-     WHERE id = $1 AND merchant_id = $2
-     RETURNING *`,
-    [transactionId, merchantId]
-  );
+  const updateQuery = fromWebhook
+    ? `UPDATE transactions SET payment_status = 'completed', completed_at = NOW()
+       WHERE id = $1 RETURNING *`
+    : `UPDATE transactions SET payment_status = 'completed', completed_at = NOW()
+       WHERE id = $1 AND merchant_id = $2 RETURNING *`;
+  const updateParams = fromWebhook ? [transactionId] : [transactionId, merchantId];
 
-  logger.info('Transaction confirmée', { transactionId, merchantId });
+  const { rows: updated } = await db.query(updateQuery, updateParams);
+
+  logger.info('Transaction confirmée', { transactionId, merchantId: tx.merchant_id, fromWebhook });
 
   return formatTransaction(updated[0]);
 }
 
 /**
- * Annuler une transaction
+ * Annuler une transaction.
+ *
+ * @param {string}  transactionId
+ * @param {string|null} merchantId  — null autorisé depuis un webhook
+ * @param {string}  [reason]
+ * @param {object}  [options]
+ * @param {boolean} [options.fromWebhook=false]
  */
-async function cancelTransaction(transactionId, merchantId, reason = null) {
-  const { rows } = await db.query(
-    'SELECT * FROM transactions WHERE id = $1 AND merchant_id = $2',
-    [transactionId, merchantId]
-  );
+async function cancelTransaction(transactionId, merchantId, reason = null, options = {}) {
+  const { fromWebhook = false } = options;
+
+  const selectQuery = fromWebhook
+    ? `SELECT * FROM transactions WHERE id = $1`
+    : `SELECT * FROM transactions WHERE id = $1 AND merchant_id = $2`;
+  const selectParams = fromWebhook ? [transactionId] : [transactionId, merchantId];
+
+  const { rows } = await db.query(selectQuery, selectParams);
 
   if (rows.length === 0) {
     throw { code: 'TRANSACTION_INTROUVABLE', message: 'Transaction introuvable.' };
@@ -163,13 +183,16 @@ async function cancelTransaction(transactionId, merchantId, reason = null) {
     throw { code: 'DEJA_COMPLETEE', message: 'Impossible d\'annuler une transaction déjà confirmée.' };
   }
 
-  const { rows: updated } = await db.query(
-    `UPDATE transactions 
-     SET payment_status = 'cancelled', cancelled_at = NOW(), cancel_reason = $3
-     WHERE id = $1 AND merchant_id = $2
-     RETURNING *`,
-    [transactionId, merchantId, reason]
-  );
+  const updateQuery = fromWebhook
+    ? `UPDATE transactions SET payment_status = 'cancelled', cancelled_at = NOW(), cancel_reason = $2
+       WHERE id = $1 RETURNING *`
+    : `UPDATE transactions SET payment_status = 'cancelled', cancelled_at = NOW(), cancel_reason = $3
+       WHERE id = $1 AND merchant_id = $2 RETURNING *`;
+  const updateParams = fromWebhook
+    ? [transactionId, reason]
+    : [transactionId, merchantId, reason];
+
+  const { rows: updated } = await db.query(updateQuery, updateParams);
 
   return formatTransaction(updated[0]);
 }
