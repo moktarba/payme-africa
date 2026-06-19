@@ -54,7 +54,7 @@ app.get('/health', (_req, res) => {
     env:     process.env.NODE_ENV || 'development',
     ts:      new Date().toISOString(),
     redis:   redisClient.isOpen ? 'connected' : (process.env.REDIS_URL || process.env.REDIS_PRIVATE_URL ? 'disconnected' : 'not_configured'),
-    db:      !!process.env.DATABASE_URL,
+    db:      !!(process.env.DATABASE_URL || process.env.DB_HOST),
   });
 });
 
@@ -133,6 +133,4 @@ module.exports = app;
 if (require.main === module) {
   start().catch(err => {
     console.error('💀 Crash fatal:', err.message);
-    process.exit(1);
-  });
-}
+    
