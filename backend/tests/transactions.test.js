@@ -1,9 +1,15 @@
 const request = require('supertest');
 const app = require('../src/app');
 const { db, redisClient } = require('../src/config/database');
+const { v4: uuidv4 } = require('uuid');
 
 const TEST_MERCHANT_ID = 'a0000000-0000-0000-0000-000000000001';
 let accessToken;
+
+// clientReferences uniques par run pour éviter les collisions entre runs
+// et rendre l'idempotence testable de manière fiable
+const RUN_REF_CASH    = `test-tx-cash-${uuidv4()}`;
+const RUN_REF_IDEMP   = `test-tx-idemp-${uuidv4()}`;
 
 beforeAll(async () => {
   // Login avec le marchand de test seed
@@ -22,7 +28,21 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.query('DELETE FROM transactions WHERE merchant_id = $1 AND client_reference LIKE $2', [TEST_MERCHANT_ID, 'test-tx-%']);
+  // Supprimer toutes les transactions de test :
+  // - préfixe 'test-tx-%' (pattern général)
+  // - anciennes clientReferences fixes d'idempotence (résidus de runs précédents)
+  await db.query(
+    `DELETE FROM transactions
+     WHERE merchant_id = $1
+       AND (
+         client_reference LIKE 'test-tx-%'
+         OR client_reference IN (
+           'a0000000-0000-0000-0000-000000000099',
+           'a0000000-0000-0000-0000-000000000098'
+         )
+       )`,
+    [TEST_MERCHANT_ID]
+  );
 });
 
 describe('POST /transactions', () => {
@@ -34,29 +54,29 @@ describe('POST /transactions', () => {
         amount: 2500,
         paymentProvider: 'cash',
         note: 'Test transaction',
-        clientReference: 'a0000000-0000-0000-0000-000000000099',
+        clientReference: RUN_REF_CASH,
       });
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.transaction.amount).toBe(2500);
     expect(res.body.transaction.paymentStatus).toBe('awaiting_confirmation');
+    // requiresManualConfirmation est présent sur le 1er appel (chemin normal)
     expect(res.body.transaction.requiresManualConfirmation).toBe(true);
   });
 
   it('doit garantir l\'idempotence', async () => {
-    const ref = 'a0000000-0000-0000-0000-000000000098';
-
     const res1 = await request(app)
       .post('/transactions')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ amount: 1000, paymentProvider: 'cash', clientReference: ref });
+      .send({ amount: 1000, paymentProvider: 'cash', clientReference: RUN_REF_IDEMP });
 
     const res2 = await request(app)
       .post('/transactions')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ amount: 1000, paymentProvider: 'cash', clientReference: ref });
+      .send({ amount: 1000, paymentProvider: 'cash', clientReference: RUN_REF_IDEMP });
 
+    // Les deux appels retournent la même transaction (même id)
     expect(res1.body.transaction.id).toBe(res2.body.transaction.id);
   });
 
