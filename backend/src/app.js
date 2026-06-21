@@ -133,4 +133,6 @@ module.exports = app;
 if (require.main === module) {
   start().catch(err => {
     console.error('💀 Crash fatal:', err.message);
-    
+    process.exit(1);
+  });
+}
