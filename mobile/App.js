@@ -1,14 +1,15 @@
 ﻿import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { registerRootComponent } from 'expo';
 
-export default function App() {
+function App() {
   return (
     <View style={styles.container}>
       <View style={styles.box}>
         <Text style={styles.emoji}>P</Text>
       </View>
       <Text style={styles.title}>PayMe Africa</Text>
-      <Text style={styles.sub}>Chargement en cours...</Text>
+      <Text style={styles.sub}>Application chargée</Text>
     </View>
   );
 }
@@ -20,3 +21,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', color: '#38A169', marginBottom: 8 },
   sub: { fontSize: 14, color: '#718096' },
 });
+
+registerRootComponent(App);
