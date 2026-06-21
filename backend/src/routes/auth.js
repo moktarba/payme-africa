@@ -8,7 +8,8 @@ const phoneSchema = Joi.object({
   phone: Joi.string().min(8).max(20).required().messages({
     'string.empty': 'Le numéro de téléphone est requis',
     'any.required': 'Le numéro de téléphone est requis',
-  })
+  }),
+  purpose: Joi.string().valid('login', 'register').default('login').optional(),
 });
 
 const registerSchema = Joi.object({

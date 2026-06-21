@@ -75,8 +75,8 @@ async function sendOtp(phone, purpose = 'login') {
     [uuidv4(), normalizedPhone, code, purpose, expiresAt]
   );
 
-  if (process.env.NODE_ENV !== 'production') {
-    logger.info(`[DEV] OTP pour ${normalizedPhone}: ${code} (expire dans ${OTP_EXPIRES_MINUTES} min)`);
+  if (process.env.NODE_ENV !== 'production' || process.env.DEMO_OTP === 'true') {
+    logger.info(`[DEV/DEMO] OTP pour ${normalizedPhone}: ${code} (expire dans ${OTP_EXPIRES_MINUTES} min)`);
     return { sent: true, dev_code: code, phone: normalizedPhone };
   }
 
