@@ -205,7 +205,7 @@ async function cancelTransaction(transactionId, merchantId, reason = null, optio
 /**
  * Historique des transactions
  */
-async function getTransactionHistory(merchantId, { limit = 20, offset = 0, dateFrom, dateTo, status } = {}) {
+async function getTransactionHistory(merchantId, { limit = 20, offset = 0, dateFrom, dateTo, status, provider } = {}) {
   let conditions = ['t.merchant_id = $1'];
   let params = [merchantId];
   let paramIndex = 2;
@@ -221,6 +221,10 @@ async function getTransactionHistory(merchantId, { limit = 20, offset = 0, dateF
   if (status) {
     conditions.push(`t.payment_status = $${paramIndex++}`);
     params.push(status);
+  }
+  if (provider) {
+    conditions.push(`t.payment_provider = $${paramIndex++}`);
+    params.push(provider);
   }
 
   const where = conditions.join(' AND ');
@@ -315,4 +319,5 @@ module.exports = {
   cancelTransaction,
   getTransactionHistory,
   getDayStats,
+  formatTransaction,
 };

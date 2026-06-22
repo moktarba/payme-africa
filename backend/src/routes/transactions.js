@@ -39,7 +39,7 @@ router.get('/stats/day', authenticate, async (req, res) => {
  * Historique des transactions
  */
 router.get('/', authenticate, async (req, res) => {
-  const { limit = 20, offset = 0, dateFrom, dateTo, status } = req.query;
+  const { limit = 20, offset = 0, dateFrom, dateTo, status, provider } = req.query;
 
   const result = await getTransactionHistory(req.merchant.id, {
     limit: Math.min(parseInt(limit), 100),
@@ -47,6 +47,7 @@ router.get('/', authenticate, async (req, res) => {
     dateFrom,
     dateTo,
     status,
+    provider,
   });
 
   res.json({ success: true, ...result });
@@ -77,6 +78,7 @@ router.post('/', authenticate, async (req, res) => {
  */
 router.get('/:id', authenticate, async (req, res) => {
   const { db } = require('../config/database');
+  const { formatTransaction } = require('../services/transactionService');
   const { rows } = await db.query(
     'SELECT * FROM transactions WHERE id = $1 AND merchant_id = $2',
     [req.params.id, req.merchant.id]
@@ -86,7 +88,7 @@ router.get('/:id', authenticate, async (req, res) => {
     return res.status(404).json({ success: false, message: 'Transaction introuvable.' });
   }
 
-  res.json({ success: true, transaction: rows[0] });
+  res.json({ success: true, transaction: formatTransaction(rows[0]) });
 });
 
 /**

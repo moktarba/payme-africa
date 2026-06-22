@@ -9,7 +9,8 @@ import { merchantApi, authApi } from '../../services/api';
 import { storage } from '../../utils/storage';
 import useStore from '../../store/useStore';
 
-const PROVIDER_ICONS = { wave: '🌊', orange_money: '🟠', free_money: '🔴', cash: '💵' };
+const PROVIDER_ICONS = { wave: '🌊', orange_money: '🟠', free_money: '🔴', cash: '💵', paydunya: '💳' };
+const APP_VERSION = 'S4 — Sprint 4';
 
 export default function ProfileScreen({ navigation }) {
   const { merchant, logout } = useStore();
@@ -98,7 +99,7 @@ export default function ProfileScreen({ navigation }) {
           <Card>
             <View style={s.infoRow}>
               <Text style={s.infoLabel}>Version</Text>
-              <Text style={s.infoValue}>1.0.0 — Sprint 0</Text>
+              <Text style={s.infoValue}>1.0.0 — {APP_VERSION}</Text>
             </View>
             <View style={s.divider} />
             <View style={s.infoRow}>
