@@ -21,6 +21,8 @@ function normalizePhone(phone) {
 
 /** Rate limiting via Redis si disponible, sinon via PostgreSQL */
 async function checkRateLimit(normalizedPhone) {
+  // Pas de rate-limit en mode test (jest)
+  if (process.env.NODE_ENV === 'test') return;
   try {
     if (redisClient.isOpen) {
       const key = `otp_rate:${normalizedPhone}`;
@@ -86,11 +88,9 @@ async function sendOtp(phone, purpose = 'login') {
       username:  process.env.AT_USERNAME,
     });
     const message = `PayMe: votre code est ${code}. Valable ${OTP_EXPIRES_MINUTES} minutes. Ne le partagez pas.`;
-    await AfricasTalking.SMS.send({
-      to: [normalizedPhone],
-      message,
-      from: process.env.AT_SENDER_ID,
-    });
+    const smsParams = { to: [normalizedPhone], message };
+    if (process.env.AT_SENDER_ID) smsParams.from = process.env.AT_SENDER_ID;
+    await AfricasTalking.SMS.send(smsParams);
     logger.info(`OTP envoyé à ${normalizedPhone}`);
     return { sent: true, phone: normalizedPhone };
   } catch (err) {

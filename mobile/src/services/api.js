@@ -57,8 +57,47 @@ api.interceptors.response.use(
         isRefreshing = false;
       }
     }
-    error.userMessage = error.response?.data?.message || 'Erreur réseau. Vérifiez votre connexion.';
-    error.errorCode = error.response?.data?.code || 'ERREUR_RESEAU';
+    // Messages user-friendly selon le type d'erreur
+    const status = error.response?.status;
+    const backendMsg = error.response?.data?.message;
+    const backendCode = error.response?.data?.code;
+
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      error.userMessage = 'Connexion lente. Vérifiez votre réseau et réessayez.';
+    } else if (!error.response) {
+      // Pas de réponse = pas de réseau
+      error.userMessage = 'Impossible de joindre le serveur. Vérifiez votre connexion mobile ou Wi-Fi.';
+    } else if (status >= 500) {
+      error.userMessage = 'Erreur du serveur. Réessayez dans quelques instants.';
+    } else if (status === 404) {
+      error.userMessage = backendMsg || 'Ressource introuvable.';
+    } else if (status === 403) {
+      error.userMessage = 'Accès non autorisé.';
+    } else if (status === 400) {
+      // Messages backend Joi/validation → déjà en français
+      error.userMessage = backendMsg || 'Données incorrectes. Vérifiez les informations saisies.';
+    } else {
+      error.userMessage = backendMsg || 'Une erreur est survenue. Réessayez.';
+    }
+
+    // Codes d'erreur métier → messages spécifiques
+    const CODE_MESSAGES = {
+      MONTANT_INVALIDE:   'Montant invalide. Entrez un montant supérieur à 0.',
+      MONTANT_TROP_ELEVE: 'Montant trop élevé (max 5 000 000 FCFA).',
+      PROVIDER_DESACTIVE: 'Ce mode de paiement n\'est pas disponible.',
+      METHODE_NON_ACTIVEE:'Ce mode de paiement n\'est pas activé sur votre compte.',
+      OTP_INVALIDE:       'Code OTP incorrect ou expiré. Réessayez.',
+      TROP_DE_TENTATIVES: 'Trop de tentatives. Attendez quelques minutes.',
+      NUMERO_INCONNU:     'Numéro non enregistré. Créez un compte d\'abord.',
+      TOKEN_INVALIDE:     'Session expirée. Reconnectez-vous.',
+      TRANSACTION_INTROUVABLE: 'Transaction introuvable.',
+      DEJA_COMPLETEE:     'Ce paiement est déjà confirmé.',
+    };
+    if (backendCode && CODE_MESSAGES[backendCode]) {
+      error.userMessage = CODE_MESSAGES[backendCode];
+    }
+
+    error.errorCode = backendCode || 'ERREUR_RESEAU';
     return Promise.reject(error);
   }
 );

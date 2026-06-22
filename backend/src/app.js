@@ -74,11 +74,32 @@ app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route introuvable', code: 'NOT_FOUND' });
 });
 
+// Mapping des codes métier → statuts HTTP
+const STATUS_BY_CODE = {
+  PHONE_EXISTE:            409,
+  MERCHANT_INTROUVABLE:    404,
+  OTP_INVALIDE:            400,
+  CODE_INCORRECT:          400,
+  OTP_INTROUVABLE:         400,
+  TROP_DE_TENTATIVES:      429,
+  TOKEN_INVALIDE:          401,
+  TOKEN_EXPIRE:            401,
+  METHODE_NON_ACTIVEE:     400,
+  PROVIDER_DESACTIVE:      400,
+  MONTANT_INVALIDE:        400,
+  MONTANT_TROP_ELEVE:      400,
+  TRANSACTION_INTROUVABLE: 404,
+  STATUT_INVALIDE:         400,
+  DEJA_COMPLETEE:          400,
+  NON_AUTORISE:            403,
+  NON_APPLICABLE:          400,
+};
+
 app.use((err, _req, res, _next) => {
-  const status  = err.status  || 500;
   const code    = err.code    || 'ERREUR_SERVEUR';
+  const status  = err.status  || STATUS_BY_CODE[code] || 500;
   const message = err.message || 'Erreur interne';
-  console.error(`[ERROR] ${status} ${code}: ${message}`);
+  if (status >= 500) console.error(`[ERROR] ${status} ${code}: ${message}`);
   res.status(status).json({ success: false, message, code });
 });
 

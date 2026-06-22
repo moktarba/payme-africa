@@ -6,10 +6,9 @@ const { v4: uuidv4 } = require('uuid');
 const TEST_MERCHANT_ID = 'a0000000-0000-0000-0000-000000000001';
 let accessToken;
 
-// clientReferences uniques par run pour éviter les collisions entre runs
-// et rendre l'idempotence testable de manière fiable
-const RUN_REF_CASH    = `test-tx-cash-${uuidv4()}`;
-const RUN_REF_IDEMP   = `test-tx-idemp-${uuidv4()}`;
+// clientReferences en UUID valide (Joi valide le format uuid)
+const RUN_REF_CASH    = uuidv4();
+const RUN_REF_IDEMP   = uuidv4();
 
 beforeAll(async () => {
   // Login avec le marchand de test seed
@@ -28,9 +27,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Supprimer toutes les transactions de test :
-  // - préfixe 'test-tx-%' (pattern général)
-  // - anciennes clientReferences fixes d'idempotence (résidus de runs précédents)
+  // Supprimer les transactions créées pendant ce run (les deux clientReferences générées)
+  await db.query(
+    `DELETE FROM transactions WHERE merchant_id = $1 AND client_reference = ANY($2)`,
+    [TEST_MERCHANT_ID, [RUN_REF_CASH, RUN_REF_IDEMP]]
+  );
+  // Cleanup résiduel (anciens runs avec préfixe ou UUIDs fixes)
   await db.query(
     `DELETE FROM transactions
      WHERE merchant_id = $1
