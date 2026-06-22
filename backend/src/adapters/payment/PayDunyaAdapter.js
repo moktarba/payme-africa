@@ -124,8 +124,15 @@ class PayDunyaAdapter extends BasePaymentAdapter {
       throw { code: 'PAYDUNYA_INVOICE_ERROR', message: msg };
     }
 
-    logger.info('PayDunya invoice créée', { invoiceToken: data.token, amount, transactionId });
-    return data.token;
+    // Construire le checkout URL si absent (sandbox ne le retourne pas toujours)
+    const checkoutUrl = data.checkout_url
+      || data.invoice_url
+      || (this.mode === 'test'
+          ? `https://app.paydunya.com/sandbox-checkout/invoice/${data.token}`
+          : `https://app.paydunya.com/checkout/invoice/${data.token}`);
+
+    logger.info('PayDunya invoice créée', { invoiceToken: data.token, checkoutUrl, amount, transactionId });
+    return { token: data.token, checkoutUrl };
   }
 
   // ─── Étape 2 : Déclencher le paiement SoftPay ───────────────────────────────
@@ -285,7 +292,7 @@ class PayDunyaAdapter extends BasePaymentAdapter {
     softpayProvider = 'wave',
   }) {
     // Étape 1 : créer la facture PayDunya
-    const invoiceToken = await this._createInvoice({
+    const { token: invoiceToken, checkoutUrl: invoiceCheckoutUrl } = await this._createInvoice({
       amount,
       description:  note || `Paiement ${amountFmt(amount)} FCFA`,
       storeName:    storeName || 'Payme Africa',
@@ -294,7 +301,24 @@ class PayDunyaAdapter extends BasePaymentAdapter {
       customerPhone,
     });
 
-    // Étape 2 : déclencher le SoftPay
+    // En mode sandbox (test), SoftPay n'est pas disponible → on utilise le checkout web
+    if (this.mode === 'test') {
+      logger.info('PayDunya mode test : utilisation checkout URL (pas de SoftPay en sandbox)', {
+        invoiceToken,
+        checkoutUrl: invoiceCheckoutUrl,
+      });
+      return {
+        providerReference:          invoiceToken,
+        status:                     'awaiting_confirmation',
+        mode:                       'test',
+        checkoutUrl:                invoiceCheckoutUrl,
+        instructions:               `[SANDBOX] Ouvrez ce lien pour simuler le paiement de ${amountFmt(amount)} FCFA : ${invoiceCheckoutUrl || 'lien PayDunya indisponible'}`,
+        requiresManualConfirmation: false,
+        providerResponse:           { token: invoiceToken, checkout_url: invoiceCheckoutUrl },
+      };
+    }
+
+    // Étape 2 (production uniquement) : déclencher le SoftPay
     const softpayResponse = await this._triggerSoftPay(softpayProvider, invoiceToken, {
       customerName,
       customerPhone,
@@ -303,10 +327,11 @@ class PayDunyaAdapter extends BasePaymentAdapter {
     // URL de paiement : Wave et OM retournent un deep link
     const checkoutUrl = softpayResponse.url
       || softpayResponse.om_url
+      || invoiceCheckoutUrl
       || null;
 
     return {
-      providerReference:          invoiceToken,   // token PayDunya = clé de polling + IPN
+      providerReference:          invoiceToken,
       status:                     'awaiting_confirmation',
       mode:                       'api',
       checkoutUrl,
