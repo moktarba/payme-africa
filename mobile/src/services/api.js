@@ -133,4 +133,12 @@ export const catalogApi = {
   deleteItem: (id) => api.delete(`/catalog/${id}`),
 };
 
+export const walletApi = {
+  getBalance: () => api.get('/wallet'),
+};
+
+export const reportsApi = {
+  getSummary: (params) => api.get('/reports/summary', { params }),
+};
+
 export default api;

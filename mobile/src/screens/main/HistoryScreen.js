@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, FlatList,
-  TouchableOpacity, RefreshControl, ActivityIndicator
+  TouchableOpacity, RefreshControl, ActivityIndicator, TextInput
 } from 'react-native';
 import { StatusBadge, EmptyState } from '../../components/ui';
 import {
@@ -11,27 +11,42 @@ import {
 import { transactionApi } from '../../services/api';
 import dayjs from 'dayjs';
 
-const FILTERS = [
-  { label: 'Tout', value: null },
-  { label: 'Confirmé', value: 'completed' },
-  { label: 'En attente', value: 'awaiting_confirmation' },
-  { label: 'Annulé', value: 'cancelled' },
+const STATUS_FILTERS = [
+  { label: 'Tout',       value: null },
+  { label: '✅ Confirmé', value: 'completed' },
+  { label: '⏳ Attente', value: 'awaiting_confirmation' },
+  { label: '❌ Annulé',  value: 'cancelled' },
 ];
+
+const PROVIDER_FILTERS = [
+  { label: 'Tous', value: null },
+  { label: '🌊 Wave',   value: 'wave' },
+  { label: '🟠 Orange', value: 'orange_money' },
+  { label: '💵 Cash',   value: 'cash' },
+  { label: '💳 PayDunya', value: 'paydunya' },
+];
+
 const LIMIT = 20;
+const TX_ICONS = { wave: '🌊', orange_money: '🟠', cash: '💵', paydunya: '💳' };
 
 export default function HistoryScreen({ navigation }) {
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState(null);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [transactions, setTransactions]   = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [refreshing, setRefreshing]       = useState(false);
+  const [statusFilter, setStatusFilter]   = useState(null);
+  const [providerFilter, setProviderFilter] = useState(null);
+  const [search, setSearch]               = useState('');
+  const [offset, setOffset]               = useState(0);
+  const [hasMore, setHasMore]             = useState(true);
+  const [loadingMore, setLoadingMore]     = useState(false);
 
   const load = useCallback(async (reset = false) => {
     const currentOffset = reset ? 0 : offset;
     try {
-      const res = await transactionApi.getHistory({ limit: LIMIT, offset: currentOffset, status: filter || undefined });
+      const params = { limit: LIMIT, offset: currentOffset };
+      if (statusFilter)   params.status   = statusFilter;
+      if (providerFilter) params.provider = providerFilter;
+      const res    = await transactionApi.getHistory(params);
       const newTxs = res.data.transactions;
       if (reset) {
         setTransactions(newTxs);
@@ -47,11 +62,30 @@ export default function HistoryScreen({ navigation }) {
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [filter, offset]);
+  }, [statusFilter, providerFilter, offset]);
 
-  useEffect(() => { setLoading(true); setOffset(0); load(true); }, [filter]);
+  useEffect(() => {
+    setLoading(true);
+    setOffset(0);
+    load(true);
+  }, [statusFilter, providerFilter]);
 
-  const icons = { wave: '🌊', orange_money: '🟠', cash: '💵' };
+  // Recherche locale (note + montant)
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return transactions;
+    return transactions.filter(tx =>
+      (tx.note || '').toLowerCase().includes(q) ||
+      String(tx.amount).includes(q) ||
+      (PROVIDER_LABELS[tx.paymentProvider] || '').toLowerCase().includes(q)
+    );
+  }, [transactions, search]);
+
+  // Total du filtre actuel
+  const totalFiltered = useMemo(
+    () => filtered.filter(tx => tx.paymentStatus === 'completed').reduce((s, tx) => s + tx.amount, 0),
+    [filtered]
+  );
 
   const renderItem = ({ item: tx }) => (
     <TouchableOpacity
@@ -60,7 +94,7 @@ export default function HistoryScreen({ navigation }) {
       activeOpacity={0.85}
     >
       <View style={[styles.txIcon, { backgroundColor: (PROVIDER_COLORS[tx.paymentProvider] || Colors.gray400) + '20' }]}>
-        <Text style={styles.txIconText}>{icons[tx.paymentProvider] || '💳'}</Text>
+        <Text style={styles.txIconText}>{TX_ICONS[tx.paymentProvider] || '💳'}</Text>
       </View>
       <View style={styles.txInfo}>
         <Text style={styles.txProvider}>{PROVIDER_LABELS[tx.paymentProvider] || tx.paymentProvider}</Text>
@@ -75,16 +109,54 @@ export default function HistoryScreen({ navigation }) {
   );
 
   const renderHeader = () => (
-    <View style={styles.filters}>
-      {FILTERS.map((f) => (
-        <TouchableOpacity
-          key={f.label}
-          style={[styles.filterChip, filter === f.value && styles.filterChipActive]}
-          onPress={() => setFilter(f.value)}
-        >
-          <Text style={[styles.filterText, filter === f.value && styles.filterTextActive]}>{f.label}</Text>
-        </TouchableOpacity>
-      ))}
+    <View>
+      {/* Barre de recherche */}
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="🔍 Rechercher (note, montant...)"
+          placeholderTextColor={Colors.gray400}
+          clearButtonMode="while-editing"
+        />
+      </View>
+
+      {/* Filtres statut */}
+      <Text style={styles.filterLabel}>Statut</Text>
+      <View style={styles.filters}>
+        {STATUS_FILTERS.map((f) => (
+          <TouchableOpacity
+            key={f.label}
+            style={[styles.filterChip, statusFilter === f.value && styles.filterChipActive]}
+            onPress={() => setStatusFilter(f.value)}
+          >
+            <Text style={[styles.filterText, statusFilter === f.value && styles.filterTextActive]}>{f.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Filtres provider */}
+      <Text style={styles.filterLabel}>Mode de paiement</Text>
+      <View style={styles.filters}>
+        {PROVIDER_FILTERS.map((f) => (
+          <TouchableOpacity
+            key={f.label}
+            style={[styles.filterChip, providerFilter === f.value && styles.filterChipActive]}
+            onPress={() => setProviderFilter(f.value)}
+          >
+            <Text style={[styles.filterText, providerFilter === f.value && styles.filterTextActive]}>{f.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Total */}
+      {filtered.length > 0 && (
+        <View style={styles.totalBar}>
+          <Text style={styles.totalCount}>{filtered.length} transaction(s)</Text>
+          <Text style={styles.totalAmount}>Total confirmé : {formatAmount(totalFiltered)}</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -97,13 +169,26 @@ export default function HistoryScreen({ navigation }) {
         <ActivityIndicator color={Colors.primary} style={styles.loader} size="large" />
       ) : (
         <FlatList
-          data={transactions}
+          data={filtered}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           ListHeaderComponent={renderHeader}
-          ListEmptyComponent={<EmptyState icon="📋" title="Aucune transaction" subtitle="Vos transactions apparaîtront ici" />}
-          ListFooterComponent={loadingMore ? <ActivityIndicator color={Colors.primary} style={{ padding: Spacing.lg }} /> : null}
-          onEndReached={() => { if (!hasMore || loadingMore) return; setLoadingMore(true); load(false); }}
+          ListEmptyComponent={
+            <EmptyState
+              icon="📋"
+              title={search ? 'Aucun résultat' : 'Aucune transaction'}
+              subtitle={search ? 'Modifiez votre recherche' : 'Vos transactions apparaîtront ici'}
+            />
+          }
+          ListFooterComponent={
+            loadingMore
+              ? <ActivityIndicator color={Colors.primary} style={{ padding: Spacing.lg }} />
+              : hasMore && !search
+              ? <TouchableOpacity style={styles.loadMoreBtn} onPress={() => { setLoadingMore(true); load(false); }}>
+                  <Text style={styles.loadMoreText}>Charger plus</Text>
+                </TouchableOpacity>
+              : null
+          }
           onEndReachedThreshold={0.5}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(true); }} tintColor={Colors.primary} />}
           contentContainerStyle={styles.list}
@@ -115,23 +200,36 @@ export default function HistoryScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
-  header: { padding: Spacing.lg, paddingBottom: 0 },
-  title: { fontSize: Typography.fontSize2XL, fontWeight: Typography.fontWeightExtrabold, color: Colors.gray900 },
-  filters: { flexDirection: 'row', padding: Spacing.lg, gap: Spacing.sm, paddingBottom: Spacing.md },
-  filterChip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.full, backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.border },
+  safe:        { flex: 1, backgroundColor: Colors.background },
+  header:      { padding: Spacing.lg, paddingBottom: Spacing.sm },
+  title:       { fontSize: Typography.fontSize2XL, fontWeight: Typography.fontWeightExtrabold, color: Colors.gray900 },
+  loader:      { marginTop: 60 },
+  list:        { padding: Spacing.lg, paddingTop: 0, flexGrow: 1 },
+
+  searchRow:   { marginBottom: Spacing.sm },
+  searchInput: { backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.border, borderRadius: BorderRadius.md, padding: Spacing.md, fontSize: Typography.fontSizeMD, color: Colors.gray900, ...Shadows.sm },
+
+  filterLabel: { fontSize: Typography.fontSizeSM, fontWeight: Typography.fontWeightSemibold, color: Colors.gray600, marginBottom: Spacing.xs, marginTop: Spacing.sm },
+  filters:     { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.sm },
+  filterChip:  { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full, backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.border },
   filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterText: { fontSize: Typography.fontSizeSM, fontWeight: Typography.fontWeightMedium, color: Colors.gray700 },
+  filterText:  { fontSize: Typography.fontSizeSM, fontWeight: Typography.fontWeightMedium, color: Colors.gray700 },
   filterTextActive: { color: Colors.white },
-  loader: { marginTop: 60 },
-  list: { padding: Spacing.lg, paddingTop: 0, flexGrow: 1 },
-  txCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: Spacing.sm, ...Shadows.sm },
-  txIcon: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md },
-  txIconText: { fontSize: 24 },
-  txInfo: { flex: 1 },
-  txProvider: { fontSize: Typography.fontSizeMD, fontWeight: Typography.fontWeightSemibold, color: Colors.gray900 },
-  txNote: { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginTop: 1 },
-  txDate: { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginTop: 2 },
-  txRight: { alignItems: 'flex-end', gap: 4 },
-  txAmount: { fontSize: Typography.fontSizeLG, fontWeight: Typography.fontWeightBold, color: Colors.gray900 },
+
+  totalBar:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.primaryBg, borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: Spacing.md },
+  totalCount:  { fontSize: Typography.fontSizeSM, color: Colors.primary, fontWeight: Typography.fontWeightMedium },
+  totalAmount: { fontSize: Typography.fontSizeSM, color: Colors.primary, fontWeight: Typography.fontWeightBold },
+
+  txCard:      { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: Spacing.sm, ...Shadows.sm },
+  txIcon:      { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md },
+  txIconText:  { fontSize: 24 },
+  txInfo:      { flex: 1 },
+  txProvider:  { fontSize: Typography.fontSizeMD, fontWeight: Typography.fontWeightSemibold, color: Colors.gray900 },
+  txNote:      { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginTop: 1 },
+  txDate:      { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginTop: 2 },
+  txRight:     { alignItems: 'flex-end', gap: 4 },
+  txAmount:    { fontSize: Typography.fontSizeLG, fontWeight: Typography.fontWeightBold, color: Colors.gray900 },
+
+  loadMoreBtn: { alignItems: 'center', padding: Spacing.lg },
+  loadMoreText:{ fontSize: Typography.fontSizeMD, color: Colors.primary, fontWeight: Typography.fontWeightSemibold },
 });
