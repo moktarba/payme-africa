@@ -13,7 +13,7 @@ import {
 import { transactionApi, merchantApi } from '../../services/api';
 
 const QUICK_AMOUNTS = [500, 1000, 1500, 2000, 3000, 5000];
-const PROVIDER_ICONS = { wave: '🌊', orange_money: '🟠', free_money: '🔴', cash: '💵' };
+const PROVIDER_ICONS = { wave: '🌊', orange_money: '🟠', free_money: '🔴', cash: '💵', paydunya: '💳' };
 
 export default function EncaissementScreen({ navigation }) {
   const [amount, setAmount] = useState('');

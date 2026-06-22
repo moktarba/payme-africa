@@ -138,6 +138,7 @@ export const PROVIDER_LABELS = {
   orange_money: 'Orange Money',
   free_money: 'Free Money',
   cash: 'Espèces',
+  paydunya: 'PayDunya',
 };
 
 export const PROVIDER_COLORS = {

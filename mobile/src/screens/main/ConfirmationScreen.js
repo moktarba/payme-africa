@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Alert
+  TouchableOpacity, Alert, Linking
 } from 'react-native';
 import { vibrate } from '../../utils/haptics';
 import { Button } from '../../components/ui';
@@ -12,7 +12,7 @@ import {
 import { transactionApi } from '../../services/api';
 import dayjs from 'dayjs';
 
-const PROVIDER_ICONS = { wave: '🌊', orange_money: '🟠', free_money: '🔴', cash: '💵' };
+const PROVIDER_ICONS = { wave: '🌊', orange_money: '🟠', free_money: '🔴', cash: '💵', paydunya: '💳' };
 
 export default function ConfirmationScreen({ navigation, route }) {
   const { transactionId, amount, provider, instructions } = route?.params || {};
@@ -92,7 +92,31 @@ export default function ConfirmationScreen({ navigation, route }) {
           <Text style={styles.headerProvider}>{PROVIDER_LABELS[provider] || provider}</Text>
         </View>
 
-        {instructions ? (
+        {/* PayDunya — lien de paiement sandbox cliquable */}
+        {provider === 'paydunya' && instructions ? (
+          <View style={styles.paydunyaCard}>
+            <Text style={styles.paydunyaTitle}>💳 Paiement PayDunya</Text>
+            <Text style={styles.paydunyaText}>
+              En mode sandbox, cliquez le lien ci-dessous pour simuler le paiement :
+            </Text>
+            {instructions.match(/https?:\/\/\S+/) ? (
+              <TouchableOpacity
+                style={styles.paydunyaLink}
+                onPress={() => {
+                  const url = instructions.match(/https?:\/\/\S+/)?.[0];
+                  if (url) Linking.openURL(url);
+                }}
+              >
+                <Text style={styles.paydunyaLinkText}>🔗 Ouvrir le lien de paiement PayDunya</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.paydunyaText}>{instructions}</Text>
+            )}
+            <Text style={styles.paydunyaNote}>
+              En production, la confirmation est automatique via IPN. En sandbox, confirmez manuellement ci-dessous.
+            </Text>
+          </View>
+        ) : instructions ? (
           <View style={styles.instructionsCard}>
             <Text style={styles.instructionsTitle}>📋 Instructions</Text>
             <Text style={styles.instructionsText}>{instructions}</Text>
@@ -152,4 +176,10 @@ const styles = StyleSheet.create({
   receiptLabel: { fontSize: Typography.fontSizeMD, color: Colors.gray600 },
   receiptValue: { fontSize: Typography.fontSizeMD, fontWeight: Typography.fontWeightSemibold, color: Colors.gray900 },
   newBtn: { width: '100%', marginBottom: Spacing.sm },
+  paydunyaCard: { backgroundColor: Colors.white, borderRadius: BorderRadius.lg, padding: Spacing.lg, marginBottom: Spacing.md, borderLeftWidth: 4, borderLeftColor: Colors.primary, ...Shadows.sm },
+  paydunyaTitle: { fontSize: Typography.fontSizeMD, fontWeight: Typography.fontWeightBold, color: Colors.gray900, marginBottom: Spacing.sm },
+  paydunyaText: { fontSize: Typography.fontSizeMD, color: Colors.gray700, lineHeight: 22, marginBottom: Spacing.sm },
+  paydunyaLink: { backgroundColor: Colors.primary, borderRadius: BorderRadius.md, padding: Spacing.md, alignItems: 'center', marginVertical: Spacing.sm },
+  paydunyaLinkText: { color: Colors.white, fontWeight: Typography.fontWeightBold, fontSize: Typography.fontSizeMD },
+  paydunyaNote: { fontSize: Typography.fontSizeSM, color: Colors.gray500, fontStyle: 'italic', marginTop: Spacing.sm },
 });
