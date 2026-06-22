@@ -16,6 +16,7 @@ async function initiateTransaction({
   itemsSnapshot,
   clientReference, // UUID généré côté mobile pour idempotence
   merchantPhone,
+  softpayProvider, // Pour PayDunya : 'checkout' | 'wave' | 'orange_money' | 'free_money'
 }) {
   // Validation montant
   if (!amount || amount <= 0) {
@@ -58,10 +59,11 @@ async function initiateTransaction({
 
   // Récupérer la devise du marchand
   const merchantResult = await db.query(
-    'SELECT currency FROM merchants WHERE id = $1',
+    'SELECT currency, business_name FROM merchants WHERE id = $1',
     [merchantId]
   );
-  const currency = merchantResult.rows[0]?.currency || 'XOF';
+  const currency     = merchantResult.rows[0]?.currency      || 'XOF';
+  const storeName    = merchantResult.rows[0]?.business_name || 'Payme Africa';
 
   // Initier via l'adaptateur
   const adapter = getAdapter(paymentProvider, paymentConfig);
@@ -70,9 +72,12 @@ async function initiateTransaction({
     currency,
     merchantId,
     merchantPhone,
+    customerName,
     customerPhone,
+    storeName,
     reference: clientReference || uuidv4(),
     note,
+    softpayProvider, // PayDunya : 'checkout' | 'wave' | 'orange_money'
   });
 
   // Créer la transaction en base

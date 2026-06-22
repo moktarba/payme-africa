@@ -21,6 +21,8 @@ const initiateSchema = Joi.object({
   customerPhone: Joi.string().max(20).optional().allow('', null),
   itemsSnapshot: Joi.array().optional(),
   clientReference: Joi.string().uuid().optional(), // UUID généré côté mobile
+  // Pour PayDunya SoftPay : sous-provider de paiement
+  softpayProvider: Joi.string().valid('checkout', 'wave', 'orange_money', 'free_money').optional().default('checkout'),
 });
 
 /**

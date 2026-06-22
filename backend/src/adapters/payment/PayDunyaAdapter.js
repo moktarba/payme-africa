@@ -289,56 +289,81 @@ class PayDunyaAdapter extends BasePaymentAdapter {
     reference,
     note,
     storeName,
-    softpayProvider = 'wave',
+    softpayProvider = 'checkout', // 'checkout' | 'wave' | 'orange_money' | 'free_money'
   }) {
-    // Étape 1 : créer la facture PayDunya
+    // Étape 1 : créer la facture PayDunya (requis dans tous les modes)
     const { token: invoiceToken, checkoutUrl: invoiceCheckoutUrl } = await this._createInvoice({
       amount,
-      description:  note || `Paiement ${amountFmt(amount)} FCFA`,
-      storeName:    storeName || 'Payme Africa',
+      description:   note || `Paiement ${amountFmt(amount)} FCFA`,
+      storeName:     storeName || 'Payme Africa',
       transactionId: reference,
       customerName,
       customerPhone,
     });
 
-    // En mode sandbox (test), SoftPay n'est pas disponible → on utilise le checkout web
-    if (this.mode === 'test') {
-      logger.info('PayDunya mode test : utilisation checkout URL (pas de SoftPay en sandbox)', {
-        invoiceToken,
-        checkoutUrl: invoiceCheckoutUrl,
-      });
+    const sandboxPrefix = this.mode === 'test' ? '[SANDBOX] ' : '';
+
+    // Mode checkout (défaut) — pas de SoftPay, retourner le lien de paiement
+    if (softpayProvider === 'checkout' || !customerPhone) {
+      logger.info('PayDunya checkout mode', { invoiceToken, mode: this.mode, softpayProvider });
       return {
         providerReference:          invoiceToken,
         status:                     'awaiting_confirmation',
-        mode:                       'test',
+        mode:                       this.mode === 'test' ? 'test_checkout' : 'checkout',
         checkoutUrl:                invoiceCheckoutUrl,
-        instructions:               `[SANDBOX] Ouvrez ce lien pour simuler le paiement de ${amountFmt(amount)} FCFA : ${invoiceCheckoutUrl || 'lien PayDunya indisponible'}`,
+        instructions:               `${sandboxPrefix}Ouvrez ce lien pour payer ${amountFmt(amount)} FCFA : ${invoiceCheckoutUrl}`,
         requiresManualConfirmation: false,
         providerResponse:           { token: invoiceToken, checkout_url: invoiceCheckoutUrl },
       };
     }
 
-    // Étape 2 (production uniquement) : déclencher le SoftPay
-    const softpayResponse = await this._triggerSoftPay(softpayProvider, invoiceToken, {
-      customerName,
-      customerPhone,
-    });
+    // Étape 2 : SoftPay direct (wave | orange_money | free_money)
+    // Fonctionne en sandbox ET en production — fallback checkout si indisponible
+    try {
+      const softpayResponse = await this._triggerSoftPay(softpayProvider, invoiceToken, {
+        customerName,
+        customerPhone,
+      });
 
-    // URL de paiement : Wave et OM retournent un deep link
-    const checkoutUrl = softpayResponse.url
-      || softpayResponse.om_url
-      || invoiceCheckoutUrl
-      || null;
+      const checkoutUrl = softpayResponse.url
+        || softpayResponse.om_url
+        || invoiceCheckoutUrl
+        || null;
 
-    return {
-      providerReference:          invoiceToken,
-      status:                     'awaiting_confirmation',
-      mode:                       'api',
-      checkoutUrl,
-      instructions:               this._buildInstructions(softpayProvider, softpayResponse, amount),
-      requiresManualConfirmation: false,
-      providerResponse:           softpayResponse,
-    };
+      logger.info('PayDunya SoftPay déclenché', {
+        softpayProvider,
+        invoiceToken,
+        mode: this.mode,
+        hasUrl: !!checkoutUrl,
+      });
+
+      return {
+        providerReference:          invoiceToken,
+        status:                     'awaiting_confirmation',
+        mode:                       this.mode === 'test' ? 'test_softpay' : 'softpay',
+        checkoutUrl,
+        instructions:               `${sandboxPrefix}${this._buildInstructions(softpayProvider, softpayResponse, amount)}`,
+        requiresManualConfirmation: false,
+        providerResponse:           softpayResponse,
+      };
+    } catch (softpayErr) {
+      // Fallback checkout si SoftPay échoue
+      logger.warn('PayDunya SoftPay indisponible — fallback checkout', {
+        softpayProvider,
+        invoiceToken,
+        mode: this.mode,
+        error: softpayErr.message || JSON.stringify(softpayErr),
+      });
+      return {
+        providerReference:          invoiceToken,
+        status:                     'awaiting_confirmation',
+        mode:                       'fallback_checkout',
+        checkoutUrl:                invoiceCheckoutUrl,
+        instructions:               `${sandboxPrefix}SoftPay indisponible. Lien de paiement : ${invoiceCheckoutUrl}`,
+        requiresManualConfirmation: false,
+        providerResponse:           { token: invoiceToken, softpay_error: softpayErr.message },
+      };
+    }
   }
 
   /**
