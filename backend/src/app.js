@@ -67,6 +67,7 @@ app.use('/reports',       require('./routes/reports'));
 app.use('/employees',     require('./routes/employees'));
 app.use('/notifications', require('./routes/notifications'));
 app.use('/webhooks',      require('./routes/webhooks'));
+app.use('/wallet',        require('./routes/wallet'));
 
 // ── GESTION D'ERREURS (toujours après les routes) ────────────────────
 app.use((_req, res) => {
