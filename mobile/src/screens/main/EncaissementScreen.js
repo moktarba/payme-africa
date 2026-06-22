@@ -8,70 +8,117 @@ import uuid from 'react-native-uuid';
 import { Button } from '../../components/ui';
 import {
   Colors, Typography, Spacing, BorderRadius, Shadows,
-  formatAmount, PROVIDER_LABELS, PROVIDER_COLORS
+  formatAmount, PROVIDER_LABELS,
 } from '../../utils/theme';
 import { transactionApi, merchantApi } from '../../services/api';
 
 const QUICK_AMOUNTS = [500, 1000, 1500, 2000, 3000, 5000];
-const PROVIDER_ICONS = { wave: '🌊', orange_money: '🟠', free_money: '🔴', cash: '💵', paydunya: '💳' };
 
-// Options PayDunya SoftPay
-const PAYDUNYA_SOFTPAY_OPTIONS = [
-  { key: 'checkout', label: '🔗 Lien de paiement', sub: 'Le client clique un lien (Wave, OM, carte...)' },
-  { key: 'wave',     label: '🌊 Wave direct',       sub: 'Push Wave sur le numéro du client' },
-  { key: 'orange_money', label: '🟠 Orange Money direct', sub: 'Push OM sur le numéro du client' },
-];
+/**
+ * Étend la liste des providers retournée par l'API :
+ * - L'entrée "paydunya" est remplacée par "Wave (PayDunya)" et "Orange Money (PayDunya)"
+ * - Les autres providers (cash, wave natif, etc.) sont conservés tels quels
+ */
+function expandProviders(apiProviders) {
+  const result = [];
+  for (const pm of apiProviders) {
+    if (pm.provider === 'paydunya') {
+      result.push({
+        id: 'paydunya_wave',
+        provider: 'paydunya',
+        softpayProvider: 'wave',
+        display_name: 'Wave',
+        icon: '🌊',
+        sub: 'Paiement Wave via PayDunya',
+        needsPhone: true,
+      });
+      result.push({
+        id: 'paydunya_om',
+        provider: 'paydunya',
+        softpayProvider: 'orange_money',
+        display_name: 'Orange Money',
+        icon: '🟠',
+        sub: 'Paiement Orange Money via PayDunya',
+        needsPhone: true,
+      });
+    } else {
+      result.push({
+        id: pm.provider,
+        provider: pm.provider,
+        softpayProvider: null,
+        display_name: pm.display_name || PROVIDER_LABELS[pm.provider] || pm.provider,
+        icon: pm.provider === 'wave' ? '🌊'
+            : pm.provider === 'orange_money' ? '🟠'
+            : pm.provider === 'cash' ? '💵'
+            : pm.provider === 'free_money' ? '🔴'
+            : '💳',
+        sub: pm.provider === 'cash' ? 'Paiement en espèces'
+           : pm.provider === 'wave' ? 'Paiement Wave (confirmation manuelle)'
+           : pm.provider === 'orange_money' ? 'Orange Money (confirmation manuelle)'
+           : 'Mobile Money',
+        needsPhone: false,
+      });
+    }
+  }
+  return result;
+}
 
 export default function EncaissementScreen({ navigation }) {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState(null);
-  const [providers, setProviders] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState('amount'); // amount | provider | paydunya | confirm
-  // État spécifique PayDunya SoftPay
-  const [softpayProvider, setSoftpayProvider] = useState('checkout');
+  const [providers, setProviders] = useState([]);       // liste étendue
+  const [selected, setSelected] = useState(null);       // {id, provider, softpayProvider, ...}
   const [customerPhone, setCustomerPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState('amount');           // amount | provider | phone | confirm
 
   useEffect(() => {
-    merchantApi.getPaymentMethods().then((res) => {
-      const enabled = res.data.paymentMethods.filter((p) => p.is_enabled);
-      setProviders(enabled);
-      if (enabled.length === 1) setSelectedProvider(enabled[0].provider);
-    }).catch(() => {});
+    merchantApi.getPaymentMethods()
+      .then((res) => {
+        const enabled = res.data.paymentMethods.filter((p) => p.is_enabled);
+        setProviders(expandProviders(enabled));
+      })
+      .catch(() => {});
   }, []);
 
   const amountNumber = parseInt(amount.replace(/\D/g, '') || '0');
 
+  // Après sélection du montant → choisir le provider
   const handleNext = () => {
     if (amountNumber < 1) { Alert.alert('Montant invalide', 'Entrez un montant supérieur à 0'); return; }
     if (providers.length === 1) {
-      const p = providers[0].provider;
-      setSelectedProvider(p);
-      if (p === 'paydunya') setStep('paydunya');
-      else setStep('confirm');
-    } else setStep('provider');
+      setSelected(providers[0]);
+      setStep(providers[0].needsPhone ? 'phone' : 'confirm');
+    } else {
+      setStep('provider');
+    }
   };
 
+  // Après sélection du provider
+  const handleSelectProvider = (pm) => {
+    setSelected(pm);
+    setCustomerPhone('');
+    vibrate(50);
+    setStep(pm.needsPhone ? 'phone' : 'confirm');
+  };
+
+  // Lancer la transaction
   const handleInitiate = async () => {
-    if (!selectedProvider) return;
-    // Validation numéro client si SoftPay direct
-    if (selectedProvider === 'paydunya' && softpayProvider !== 'checkout' && !customerPhone.trim()) {
-      Alert.alert('Numéro requis', 'Entrez le numéro de téléphone du client pour le paiement direct.');
+    if (!selected) return;
+    if (selected.needsPhone && !customerPhone.trim()) {
+      Alert.alert('Numéro requis', 'Entrez le numéro de téléphone du client.');
       return;
     }
     setLoading(true);
     try {
-      const clientReference = uuid.v4();
       const body = {
         amount: amountNumber,
-        paymentProvider: selectedProvider,
+        paymentProvider: selected.provider,
         note: note.trim() || undefined,
-        clientReference,
+        clientReference: uuid.v4(),
       };
-      // PayDunya SoftPay
-      if (selectedProvider === 'paydunya') {
-        body.softpayProvider = softpayProvider;
+      if (selected.softpayProvider) {
+        body.softpayProvider = selected.softpayProvider;
         if (customerPhone.trim()) body.customerPhone = customerPhone.trim();
       }
       const res = await transactionApi.initiate(body);
@@ -79,8 +126,9 @@ export default function EncaissementScreen({ navigation }) {
       navigation.navigate('confirmation', {
         transactionId: transaction.id,
         amount: amountNumber,
-        provider: selectedProvider,
-        softpayProvider: selectedProvider === 'paydunya' ? softpayProvider : undefined,
+        provider: selected.provider,
+        providerLabel: selected.display_name,
+        providerIcon: selected.icon,
         instructions: instructions || '',
         requiresManualConfirmation: !!requiresManualConfirmation,
       });
@@ -91,7 +139,8 @@ export default function EncaissementScreen({ navigation }) {
     }
   };
 
-  // Étape 1 — Montant
+  // ── Étape 1 — Montant ───────────────────────────────────────────────────────
+
   if (step === 'amount') {
     return (
       <SafeAreaView style={styles.safe}>
@@ -144,7 +193,8 @@ export default function EncaissementScreen({ navigation }) {
     );
   }
 
-  // Étape 2 — Choix provider
+  // ── Étape 2 — Choix du mode de paiement ────────────────────────────────────
+
   if (step === 'provider') {
     return (
       <SafeAreaView style={styles.safe}>
@@ -158,28 +208,18 @@ export default function EncaissementScreen({ navigation }) {
           <View style={styles.providerList}>
             {providers.map((pm) => (
               <TouchableOpacity
-                key={pm.provider}
-                style={[styles.providerCard, selectedProvider === pm.provider && styles.providerCardActive]}
-                onPress={() => {
-                  setSelectedProvider(pm.provider);
-                  vibrate(50);
-                  if (pm.provider === 'paydunya') setStep('paydunya');
-                  else setStep('confirm');
-                }}
+                key={pm.id}
+                style={[styles.providerCard, selected?.id === pm.id && styles.providerCardActive]}
+                onPress={() => handleSelectProvider(pm)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.providerIcon}>{PROVIDER_ICONS[pm.provider] || '💳'}</Text>
+                <Text style={styles.providerIcon}>{pm.icon}</Text>
                 <View style={styles.providerInfo}>
-                  <Text style={styles.providerName}>{pm.display_name || PROVIDER_LABELS[pm.provider]}</Text>
-                  <Text style={styles.providerSub}>
-                    {pm.provider === 'cash' ? 'Paiement en espèces'
-                     : pm.provider === 'paydunya' ? 'Wave, Orange Money, carte...'
-                     : pm.provider === 'wave' ? 'Paiement Wave'
-                     : 'Mobile Money'}
-                  </Text>
+                  <Text style={styles.providerName}>{pm.display_name}</Text>
+                  <Text style={styles.providerSub}>{pm.sub}</Text>
                 </View>
-                <View style={[styles.providerCheck, selectedProvider === pm.provider && styles.providerCheckActive]}>
-                  {selectedProvider === pm.provider && <Text style={{ color: Colors.white }}>✓</Text>}
+                <View style={[styles.providerCheck, selected?.id === pm.id && styles.providerCheckActive]}>
+                  {selected?.id === pm.id && <Text style={{ color: Colors.white }}>✓</Text>}
                 </View>
               </TouchableOpacity>
             ))}
@@ -189,66 +229,52 @@ export default function EncaissementScreen({ navigation }) {
     );
   }
 
-  // Étape 2b — Configuration PayDunya (sous-provider + numéro client)
-  if (step === 'paydunya') {
+  // ── Étape 3 — Numéro du client (SoftPay seulement) ─────────────────────────
+
+  if (step === 'phone') {
     return (
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.container}>
           <TouchableOpacity style={styles.closeBtn} onPress={() => setStep(providers.length > 1 ? 'provider' : 'amount')}>
             <Text style={styles.closeText}>← Retour</Text>
           </TouchableOpacity>
-          <Text style={styles.stepTitle}>💳 PayDunya</Text>
+          <Text style={styles.stepTitle}>{selected?.icon} {selected?.display_name}</Text>
           <Text style={styles.amountSummary}>{formatAmount(amountNumber)}</Text>
 
-          <Text style={styles.sectionLabel}>Mode de collecte</Text>
-          {PAYDUNYA_SOFTPAY_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.key}
-              style={[styles.providerCard, softpayProvider === opt.key && styles.providerCardActive]}
-              onPress={() => { setSoftpayProvider(opt.key); vibrate(30); }}
-              activeOpacity={0.85}
-            >
-              <View style={styles.providerInfo}>
-                <Text style={styles.providerName}>{opt.label}</Text>
-                <Text style={styles.providerSub}>{opt.sub}</Text>
-              </View>
-              <View style={[styles.providerCheck, softpayProvider === opt.key && styles.providerCheckActive]}>
-                {softpayProvider === opt.key && <Text style={{ color: Colors.white }}>✓</Text>}
-              </View>
-            </TouchableOpacity>
-          ))}
-
-          {softpayProvider !== 'checkout' && (
-            <View style={{ marginTop: Spacing.md }}>
-              <Text style={styles.sectionLabel}>Numéro du client</Text>
-              <TextInput
-                style={styles.noteInput}
-                value={customerPhone}
-                onChangeText={setCustomerPhone}
-                placeholder="+221 7X XXX XX XX"
-                placeholderTextColor={Colors.gray400}
-                keyboardType="phone-pad"
-                maxLength={20}
-              />
-            </View>
-          )}
+          <View style={styles.phoneCard}>
+            <Text style={styles.phoneLabel}>📱 Numéro de téléphone du client</Text>
+            <Text style={styles.phoneSub}>
+              Le client recevra une demande de paiement {selected?.display_name} sur ce numéro.
+            </Text>
+            <TextInput
+              style={styles.phoneInput}
+              value={customerPhone}
+              onChangeText={setCustomerPhone}
+              placeholder="+221 7X XXX XX XX"
+              placeholderTextColor={Colors.gray400}
+              keyboardType="phone-pad"
+              maxLength={20}
+              autoFocus
+            />
+          </View>
 
           <Button
             title="Continuer"
-            onPress={() => setStep('confirm')}
+            onPress={() => {
+              if (!customerPhone.trim()) { Alert.alert('Numéro requis', 'Entrez le numéro du client.'); return; }
+              setStep('confirm');
+            }}
             size="xl"
-            style={{ marginTop: Spacing.xl }}
+            style={{ marginTop: Spacing.md }}
           />
         </ScrollView>
       </SafeAreaView>
     );
   }
 
-  // Étape 3 — Confirmation
-  const prevStep = selectedProvider === 'paydunya' ? 'paydunya' : providers.length > 1 ? 'provider' : 'amount';
-  const softpayLabel = selectedProvider === 'paydunya'
-    ? (PAYDUNYA_SOFTPAY_OPTIONS.find(o => o.key === softpayProvider)?.label || softpayProvider)
-    : null;
+  // ── Étape 4 — Confirmation ──────────────────────────────────────────────────
+
+  const prevStep = selected?.needsPhone ? 'phone' : providers.length > 1 ? 'provider' : 'amount';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -264,15 +290,9 @@ export default function EncaissementScreen({ navigation }) {
           <View style={styles.confirmRow}>
             <Text style={styles.confirmLabel}>Mode de paiement</Text>
             <Text style={styles.confirmValue}>
-              {PROVIDER_ICONS[selectedProvider]} {PROVIDER_LABELS[selectedProvider] || selectedProvider}
+              {selected?.icon} {selected?.display_name}
             </Text>
           </View>
-          {softpayLabel && (
-            <View style={styles.confirmRow}>
-              <Text style={styles.confirmLabel}>Collecte via</Text>
-              <Text style={styles.confirmValue}>{softpayLabel}</Text>
-            </View>
-          )}
           {customerPhone ? (
             <View style={styles.confirmRow}>
               <Text style={styles.confirmLabel}>Numéro client</Text>
@@ -292,6 +312,8 @@ export default function EncaissementScreen({ navigation }) {
     </SafeAreaView>
   );
 }
+
+// ── Clavier numérique ────────────────────────────────────────────────────────
 
 function Keypad({ value, onChange }) {
   const keys = ['1','2','3','4','5','6','7','8','9','000','0','⌫'];
@@ -347,11 +369,14 @@ const styles = StyleSheet.create({
   providerSub: { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginTop: 2 },
   providerCheck: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: Colors.border, justifyContent: 'center', alignItems: 'center' },
   providerCheckActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  phoneCard: { backgroundColor: Colors.gray50, borderRadius: BorderRadius.lg, padding: Spacing.lg, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border },
+  phoneLabel: { fontSize: Typography.fontSizeMD, fontWeight: Typography.fontWeightBold, color: Colors.gray900, marginBottom: Spacing.sm },
+  phoneSub: { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginBottom: Spacing.md, lineHeight: 20 },
+  phoneInput: { borderWidth: 1.5, borderColor: Colors.primary, borderRadius: BorderRadius.md, padding: Spacing.md, fontSize: Typography.fontSizeLG, color: Colors.gray900, backgroundColor: Colors.white, fontWeight: Typography.fontWeightSemibold },
   confirmCard: { backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: Spacing.xl, marginBottom: Spacing.xl, ...Shadows.md },
   confirmAmount: { fontSize: 48, fontWeight: Typography.fontWeightExtrabold, color: Colors.primary, textAlign: 'center', marginBottom: Spacing.lg },
   confirmDivider: { height: 1, backgroundColor: Colors.border, marginBottom: Spacing.md },
   confirmRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: Spacing.sm },
   confirmLabel: { fontSize: Typography.fontSizeMD, color: Colors.gray600 },
   confirmValue: { fontSize: Typography.fontSizeMD, fontWeight: Typography.fontWeightSemibold, color: Colors.gray900 },
-  sectionLabel: { fontSize: Typography.fontSizeSM, fontWeight: Typography.fontWeightSemibold, color: Colors.gray500, textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.sm, marginTop: Spacing.md },
 });
