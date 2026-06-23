@@ -10,7 +10,7 @@ import { storage } from '../../utils/storage';
 import useStore from '../../store/useStore';
 
 const PROVIDER_ICONS = { wave: '🌊', orange_money: '🟠', free_money: '🔴', cash: '💵', paydunya: '💳' };
-const APP_VERSION = 'S4 — Sprint 4';
+const APP_VERSION = 'S5 — Sprint 5';
 
 export default function ProfileScreen({ navigation }) {
   const { merchant, logout } = useStore();

@@ -156,8 +156,10 @@ export default function HomeScreen({ navigation }) {
 
         {/* Raccourcis */}
         <View style={styles.shortcuts}>
-          <ShortcutBtn icon="📋" label="Historique" onPress={() => navigation.navigate('history')} />
-          <ShortcutBtn icon="📦" label="Catalogue" onPress={() => navigation.navigate('catalog')} />
+          <ShortcutBtn icon="📋" label="Historique"  onPress={() => navigation.navigate('history')} />
+          <ShortcutBtn icon="📦" label="Catalogue"   onPress={() => navigation.navigate('catalog')} />
+          <ShortcutBtn icon="📊" label="Rapports"    onPress={() => navigation.navigate('reports')} />
+          <ShortcutBtn icon="🔔" label="Notifications" onPress={() => navigation.navigate('notifications')} />
         </View>
 
         {/* Transactions récentes */}
@@ -296,10 +298,10 @@ const styles = StyleSheet.create({
   providerAmount:  { fontSize: Typography.fontSizeMD, fontWeight: Typography.fontWeightSemibold, color: Colors.gray900 },
   providerCount:   { fontSize: Typography.fontSizeSM, color: Colors.gray500, marginLeft: 4 },
 
-  shortcuts:       { flexDirection: 'row', paddingHorizontal: Spacing.lg, gap: Spacing.md, marginBottom: Spacing.md },
-  shortcutBtn:     { flex: 1, backgroundColor: Colors.white, borderRadius: BorderRadius.lg, padding: Spacing.lg, alignItems: 'center', ...Shadows.sm },
-  shortcutIcon:    { fontSize: 28, marginBottom: Spacing.sm },
-  shortcutLabel:   { fontSize: Typography.fontSizeSM, fontWeight: Typography.fontWeightSemibold, color: Colors.gray700 },
+  shortcuts:       { flexDirection: 'row', paddingHorizontal: Spacing.lg, gap: Spacing.sm, marginBottom: Spacing.md, flexWrap: 'wrap' },
+  shortcutBtn:     { flex: 1, minWidth: '20%', backgroundColor: Colors.white, borderRadius: BorderRadius.lg, paddingVertical: Spacing.md, paddingHorizontal: 4, alignItems: 'center', ...Shadows.sm },
+  shortcutIcon:    { fontSize: 24, marginBottom: 4 },
+  shortcutLabel:   { fontSize: 10, fontWeight: Typography.fontWeightSemibold, color: Colors.gray700, textAlign: 'center' },
 
   section:         { padding: Spacing.lg, paddingTop: 0 },
   sectionHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },

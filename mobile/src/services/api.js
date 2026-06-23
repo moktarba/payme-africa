@@ -137,8 +137,19 @@ export const walletApi = {
   getBalance: () => api.get('/wallet'),
 };
 
-export const reportsApi = {
-  getSummary: (params) => api.get('/reports/summary', { params }),
+export const reportApi = {
+  getDay:      (date) => api.get('/reports/day', date ? { params: { date } } : {}),
+  getWeek:     () => api.get('/reports/week'),
+  getMonth:    (year, month) => api.get('/reports/month', { params: { year, month } }),
+  getTopItems: (limit = 5) => api.get('/reports/top-items', { params: { limit } }),
+  exportCSV:   (params) => api.get('/reports/export', { params }),
+};
+
+export const notificationApi = {
+  list:        (params) => api.get('/notifications', { params }),
+  markRead:    (ids) => api.post('/notifications/read', { ids }),
+  markAllRead: () => api.post('/notifications/read', { ids: null }),
+  getPrefs:    () => api.get('/notifications/preferences'),
 };
 
 export default api;
