@@ -110,6 +110,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         <View style={s.section}>
+          <Button title="👥 Connexion employé (PIN)" variant="secondary" onPress={() => navigation.navigate('pinLogin')} size="lg" style={{ marginBottom: 10 }} />
           <Button title="Se déconnecter" variant="danger" onPress={handleLogout} size="lg" />
         </View>
       </ScrollView>

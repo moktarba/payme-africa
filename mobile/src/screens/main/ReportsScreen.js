@@ -41,13 +41,28 @@ export default function ReportsScreen({ navigation }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleExport = async () => {
-    try {
-      await Share.share({
-        message: buildShareText(data, tab),
-        title: 'Rapport PayMe Africa',
-      });
-    } catch {}
+  const handleExport = () => {
+    Alert.alert('Exporter', 'Choisissez un format', [
+      {
+        text: '📊 Résumé texte',
+        onPress: async () => {
+          try { await Share.share({ message: buildShareText(data, tab), title: 'Rapport PayMe Africa' }); } catch {}
+        },
+      },
+      {
+        text: '📥 Export CSV (30j)',
+        onPress: async () => {
+          try {
+            const res = await reportApi.exportCSV({ limit: 1000 });
+            const csv = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+            await Share.share({ message: csv, title: 'transactions_payme.csv' });
+          } catch (err) {
+            Alert.alert('Erreur', err.userMessage || 'Impossible d\'exporter le CSV.');
+          }
+        },
+      },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
   };
 
   return (

@@ -21,6 +21,7 @@ import TransactionScreen  from '../screens/main/TransactionScreen';
 import ReportsScreen      from '../screens/main/ReportsScreen';
 import EmployeesScreen    from '../screens/main/EmployeesScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
+import PinLoginScreen      from '../screens/main/PinLoginScreen';
 
 const Tab   = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -91,6 +92,8 @@ function AppNavigator() {
         options={{ presentation: 'card' }} />
       <Stack.Screen name="notifications"    component={NotificationsScreen}
         options={{ presentation: 'card' }} />
+      <Stack.Screen name="pinLogin"          component={PinLoginScreen}
+        options={{ presentation: 'modal', gestureEnabled: true }} />
     </Stack.Navigator>
   );
 }
