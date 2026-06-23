@@ -137,6 +137,16 @@ export const walletApi = {
   getBalance: () => api.get('/wallet'),
 };
 
+export const employeeApi = {
+  list:       () => api.get('/employees'),
+  getStats:   () => api.get('/employees/stats'),
+  create:     (data) => api.post('/employees', data),
+  update:     (id, data) => api.put(`/employees/${id}`, data),
+  setPin:     (id, pin) => api.post(`/employees/${id}/pin`, { pin }),
+  deactivate: (id) => api.delete(`/employees/${id}`),
+  loginPin:   (employeeId, pin) => api.post('/employees/login-pin', { employeeId, pin }),
+};
+
 export const reportApi = {
   getDay:      (date) => api.get('/reports/day', date ? { params: { date } } : {}),
   getWeek:     () => api.get('/reports/week'),
