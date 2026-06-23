@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Alert, Switch
+  TouchableOpacity, Alert, Switch, Platform
 } from 'react-native';
 import { Button, Card } from '../../components/ui';
 import { Colors, Typography, Spacing, BorderRadius, PROVIDER_LABELS, PROVIDER_COLORS } from '../../utils/theme';
@@ -35,17 +35,23 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const doLogout = async () => {
+    const refreshToken = await storage.get('refreshToken');
+    if (refreshToken) await authApi.logout(refreshToken).catch(() => {});
+    await logout();
+  };
+
   const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      // Alert.alert sur web utilise window.confirm() qui ne supporte pas les callbacks
+      if (window.confirm('Voulez-vous vous déconnecter ?')) {
+        doLogout();
+      }
+      return;
+    }
     Alert.alert('Déconnexion', 'Voulez-vous vous déconnecter ?', [
       { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Déconnecter', style: 'destructive',
-        onPress: async () => {
-          const refreshToken = await storage.get('refreshToken');
-          if (refreshToken) await authApi.logout(refreshToken).catch(() => {});
-          await logout();
-        }
-      }
+      { text: 'Déconnecter', style: 'destructive', onPress: doLogout }
     ]);
   };
 
