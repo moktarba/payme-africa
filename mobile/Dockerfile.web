@@ -7,6 +7,14 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
+# Patch import.meta.env → process.env dans node_modules (zustand + autres)
+# Metro bundler ne peut pas utiliser import.meta dans des scripts classiques (non-module)
+RUN find /app/node_modules -type f \( -name "*.js" -o -name "*.mjs" -o -name "*.cjs" \) \
+    ! -path "*/.cache/*" \
+    | xargs grep -l 'import\.meta\.env' 2>/dev/null \
+    | xargs -r sed -i 's/import\.meta\.env/process\.env/g' \
+    && echo "import.meta.env patched"
+
 # Copier le code source
 COPY . .
 
@@ -15,7 +23,13 @@ ARG EXPO_PUBLIC_API_URL=https://api.faymafrica.fr
 ENV EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL
 
 # Builder l'app Expo pour le web
-RUN npx expo export --platform web --output-dir dist
+RUN npx expo export --platform web --output-dir dist && \
+    echo "=== Post-processing bundle: replacing import.meta.env ===" && \
+    find dist -type f -name "*.js" \
+      | xargs grep -l 'import\.meta' 2>/dev/null \
+      | xargs -r sed -i 's/import\.meta\.env/process\.env/g' && \
+    echo "=== Done. Checking result ===" && \
+    grep -rl 'import\.meta\.env' dist || echo "✅ No import.meta.env left in dist"
 
 # Stage 2 : Servir les fichiers statiques avec nginx
 FROM nginx:alpine
