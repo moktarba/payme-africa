@@ -8,6 +8,7 @@ const {
   getTransactionHistory,
   getDayStats,
 } = require('../services/transactionService');
+const { notifyTransactionConfirmed } = require('../services/notificationService');
 
 const initiateSchema = Joi.object({
   amount: Joi.number().integer().min(1).max(5000000).required().messages({
@@ -97,6 +98,8 @@ router.get('/:id', authenticate, async (req, res) => {
  */
 router.post('/:id/confirm', authenticate, async (req, res) => {
   const transaction = await confirmTransaction(req.params.id, req.merchant.id);
+  // Notification asynchrone — ne bloque pas la réponse
+  notifyTransactionConfirmed(req.merchant.id, transaction).catch(() => {});
   res.json({ success: true, transaction, message: 'Paiement confirmé !' });
 });
 

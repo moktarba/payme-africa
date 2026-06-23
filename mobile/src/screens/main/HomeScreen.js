@@ -8,7 +8,7 @@ import {
   Colors, Typography, Spacing, BorderRadius, Shadows,
   formatAmount, PROVIDER_LABELS, PROVIDER_COLORS
 } from '../../utils/theme';
-import { transactionApi, walletApi } from '../../services/api';
+import { transactionApi, walletApi, notificationApi } from '../../services/api';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { getQueue, syncAll } from '../../services/offlineQueue';
 import useStore from '../../store/useStore';
@@ -26,17 +26,22 @@ export default function HomeScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [pendingCount, setPendingCount] = useState(getQueue().length);
   const [syncing, setSyncing]     = useState(false);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
 
   const load = useCallback(async () => {
     try {
-      const [statsRes, historyRes, walletRes] = await Promise.all([
+      const [statsRes, historyRes, walletRes, notifRes] = await Promise.all([
         transactionApi.getDayStats(),
         transactionApi.getHistory({ limit: 5 }),
         walletApi.getBalance(),
+        notificationApi.list({ limit: 1, unreadOnly: true }).catch(() => null),
       ]);
       setStats(statsRes.data.stats);
       setRecentTxs(historyRes.data.transactions);
       setWallet(walletRes.data);
+      if (notifRes?.data?.unreadCount !== undefined) {
+        setUnreadNotifs(notifRes.data.unreadCount);
+      }
     } catch (_) {}
     finally {
       setLoading(false);
@@ -159,7 +164,7 @@ export default function HomeScreen({ navigation }) {
           <ShortcutBtn icon="📋" label="Historique"  onPress={() => navigation.navigate('history')} />
           <ShortcutBtn icon="📦" label="Catalogue"   onPress={() => navigation.navigate('catalog')} />
           <ShortcutBtn icon="📊" label="Rapports"    onPress={() => navigation.navigate('reports')} />
-          <ShortcutBtn icon="🔔" label="Notifications" onPress={() => navigation.navigate('notifications')} />
+          <ShortcutBtn icon="🔔" label="Notifications" onPress={() => navigation.navigate('notifications')} badge={unreadNotifs} />
         </View>
 
         {/* Transactions récentes */}
@@ -222,10 +227,17 @@ function ProviderRow({ provider, data }) {
   );
 }
 
-function ShortcutBtn({ icon, label, onPress }) {
+function ShortcutBtn({ icon, label, onPress, badge = 0 }) {
   return (
     <TouchableOpacity style={styles.shortcutBtn} onPress={onPress} activeOpacity={0.8}>
-      <Text style={styles.shortcutIcon}>{icon}</Text>
+      <View style={{ position: 'relative' }}>
+        <Text style={styles.shortcutIcon}>{icon}</Text>
+        {badge > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeTxt}>{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        )}
+      </View>
       <Text style={styles.shortcutLabel}>{label}</Text>
     </TouchableOpacity>
   );
@@ -302,6 +314,8 @@ const styles = StyleSheet.create({
   shortcutBtn:     { flex: 1, minWidth: '20%', backgroundColor: Colors.white, borderRadius: BorderRadius.lg, paddingVertical: Spacing.md, paddingHorizontal: 4, alignItems: 'center', ...Shadows.sm },
   shortcutIcon:    { fontSize: 24, marginBottom: 4 },
   shortcutLabel:   { fontSize: 10, fontWeight: Typography.fontWeightSemibold, color: Colors.gray700, textAlign: 'center' },
+  badge:           { position: 'absolute', top: -4, right: -8, backgroundColor: '#dc2626', borderRadius: 99, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
+  badgeTxt:        { fontSize: 9, fontWeight: '800', color: '#fff' },
 
   section:         { padding: Spacing.lg, paddingTop: 0 },
   sectionHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
