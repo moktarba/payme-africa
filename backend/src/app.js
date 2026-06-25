@@ -34,8 +34,13 @@ if (process.env.NODE_ENV !== 'test') {
 
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: parseInt(process.env.RATE_LIMIT_MAX || '1000'),
   message: { success: false, message: 'Trop de requêtes. Attendez quelques minutes.' },
+  skip: (req) => {
+    // Ne pas limiter les appels depuis le réseau interne Docker / loopback
+    const ip = req.ip || '';
+    return ip === '127.0.0.1' || ip === '::1' || ip.startsWith('172.') || ip.startsWith('::ffff:172.');
+  },
 }));
 
 const authLimiter = rateLimit({

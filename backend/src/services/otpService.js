@@ -21,8 +21,8 @@ function normalizePhone(phone) {
 
 /** Rate limiting via Redis si disponible, sinon via PostgreSQL */
 async function checkRateLimit(normalizedPhone) {
-  // Pas de rate-limit en mode test (jest)
-  if (process.env.NODE_ENV === 'test') return;
+  // Pas de rate-limit en mode test (jest) ou DEMO_OTP (tests E2E)
+  if (process.env.NODE_ENV === 'test' || process.env.DEMO_OTP === 'true') return;
   try {
     if (redisClient.isOpen) {
       const key = `otp_rate:${normalizedPhone}`;
