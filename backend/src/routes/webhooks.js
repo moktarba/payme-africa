@@ -4,11 +4,11 @@
  * Routes Webhooks — Notifications entrantes des providers de paiement
  *
  * ⚠️  Ces routes ne portent PAS le middleware authenticate.
- *     Les requêtes viennent des serveurs PayDunya / Wave, sans token JWT.
+ *     Les requêtes viennent des serveurs Paytech / Wave, sans token JWT.
  *     La sécurité repose exclusivement sur la vérification de hash/signature
  *     à l'intérieur de chaque adapter.
  *
- * POST /webhooks/paydunya  — IPN PayDunya (urlencoded)
+ * POST /webhooks/paytech   — IPN Paytech (urlencoded)
  * POST /webhooks/wave      — Webhook Wave Business (JSON + HMAC-SHA256)
  */
 
@@ -18,33 +18,33 @@ const { getAdapter } = require('../adapters/payment');
 const { confirmTransaction, cancelTransaction } = require('../services/transactionService');
 const { db } = require('../config/database');
 
-// ─── POST /webhooks/paydunya ─────────────────────────────────────────────────
+// ─── POST /webhooks/paytech ──────────────────────────────────────────────────
 
 /**
- * IPN PayDunya
+ * IPN Paytech
  *
- * PayDunya envoie : POST application/x-www-form-urlencoded
- * Payload sous la clé "data".
- * Hash = SHA-512(masterKey) pour vérifier l'authenticité.
+ * Paytech envoie : POST application/x-www-form-urlencoded
+ * Champs : type_event, ref_command, token, item_price, currency,
+ *           api_key_sha256, api_secret_sha256, custom_field
  *
- * custom_data.transaction_id contient notre UUID interne.
- * PayDunya rejoue l'IPN jusqu'à recevoir HTTP 200 — le handler est idempotent.
+ * ref_command = notre UUID de transaction.
+ * Paytech rejoue l'IPN jusqu'à recevoir HTTP 200 — le handler est idempotent.
  */
-router.post('/paydunya', async (req, res) => {
-  // Répondre 200 immédiatement pour éviter les retentatives PayDunya
-  // La logique de traitement tourne en async
+router.post('/paytech', async (req, res) => {
+  // Répondre 200 immédiatement pour éviter les retentatives Paytech
   res.sendStatus(200);
 
   try {
-    const adapter = getAdapter('paydunya');
+    const adapter = getAdapter('paytech');
     const result  = await adapter.handleWebhook(req.body);
 
-    const { status, transactionId, providerReference, receiptUrl } = result;
+    const { status, transactionId, providerReference } = result;
 
     if (!transactionId) {
-      logger.warn('PayDunya IPN : transaction_id absent du custom_data', {
+      logger.warn('Paytech IPN : transaction_id absent (ref_command / custom_field)', {
         providerReference,
         status,
+        ref_command: req.body?.ref_command,
       });
       return;
     }
@@ -56,7 +56,7 @@ router.post('/paydunya', async (req, res) => {
     );
 
     if (rows.length === 0) {
-      logger.warn('PayDunya IPN : transaction introuvable en base', { transactionId });
+      logger.warn('Paytech IPN : transaction introuvable en base', { transactionId });
       return;
     }
 
@@ -64,9 +64,9 @@ router.post('/paydunya', async (req, res) => {
 
     // Idempotence : ne pas retraiter une transaction déjà finalisée
     if (tx.payment_status === 'completed' || tx.payment_status === 'cancelled') {
-      logger.info('PayDunya IPN : transaction déjà finalisée, ignorée', {
+      logger.info('Paytech IPN : transaction déjà finalisée, ignorée', {
         transactionId,
-        currentStatus: tx.payment_status,
+        currentStatus:  tx.payment_status,
         receivedStatus: status,
       });
       return;
@@ -74,24 +74,22 @@ router.post('/paydunya', async (req, res) => {
 
     if (status === 'completed') {
       await confirmTransaction(transactionId, null, { fromWebhook: true });
-      logger.info('PayDunya IPN : transaction confirmée', { transactionId, providerReference });
+      logger.info('Paytech IPN : transaction confirmée', { transactionId, providerReference });
     } else if (status === 'failed') {
-      await cancelTransaction(transactionId, null, 'Annulé ou échoué via IPN PayDunya', { fromWebhook: true });
-      logger.info('PayDunya IPN : transaction annulée/échouée', { transactionId, providerReference });
+      await cancelTransaction(transactionId, null, 'Annulé ou échoué via IPN Paytech', { fromWebhook: true });
+      logger.info('Paytech IPN : transaction annulée/échouée', { transactionId, providerReference });
     } else {
-      // status = 'pending' → pas d'action, attendre la prochaine notification
-      logger.info('PayDunya IPN : statut pending, aucune action', { transactionId, status });
+      logger.info('Paytech IPN : statut pending, aucune action', { transactionId, status });
     }
 
   } catch (err) {
-    // Ne pas propager : la réponse 200 est déjà envoyée
-    if (err.code === 'HASH_INVALIDE') {
-      logger.error('PayDunya IPN : signature invalide — requête rejetée', { error: err.message });
+    if (err.code === 'SIGNATURE_INVALIDE') {
+      logger.error('Paytech IPN : signature invalide — requête rejetée', { error: err.message });
     } else {
-      logger.error('PayDunya IPN : erreur de traitement', {
-        error:   err.message,
-        code:    err.code,
-        stack:   err.stack,
+      logger.error('Paytech IPN : erreur de traitement', {
+        error: err.message,
+        code:  err.code,
+        stack: err.stack,
       });
     }
   }

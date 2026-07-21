@@ -49,10 +49,14 @@ async function register({ phone, businessName, ownerName, city, activityType }) 
     [merchantId, normalizedPhone, businessName, ownerName || null, city || null, activityType || null]
   );
 
-  // Activer Cash par défaut
+  // Activer les méthodes de paiement par défaut
   await db.query(
     `INSERT INTO merchant_payment_methods (merchant_id, provider, is_enabled, display_name)
-     VALUES ($1, 'cash', TRUE, 'Espèces'), ($1, 'wave', TRUE, 'Wave')`,
+     VALUES ($1, 'cash', TRUE, 'Espèces'),
+            ($1, 'wave', TRUE, 'Wave'),
+            ($1, 'orange_money', TRUE, 'Orange Money'),
+            ($1, 'free_money', TRUE, 'Free Money'),
+            ($1, 'paytech', TRUE, 'Paytech (Mobile Money)')`,
     [merchantId]
   );
 

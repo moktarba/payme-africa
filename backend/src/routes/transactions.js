@@ -16,7 +16,7 @@ const initiateSchema = Joi.object({
     'number.min': 'Le montant doit être supérieur à 0',
     'any.required': 'Le montant est requis',
   }),
-  paymentProvider: Joi.string().valid('cash', 'wave', 'orange_money', 'free_money', 'paydunya').required(),
+  paymentProvider: Joi.string().valid('cash', 'wave', 'orange_money', 'free_money', 'paytech').required(),
   note: Joi.string().max(500).optional().allow('', null),
   customerName: Joi.string().max(200).optional().allow('', null),
   customerPhone: Joi.string().max(20).optional().allow('', null),
